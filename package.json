@@ -1,0 +1,19 @@
+{
+  "name": "@madowaku/system-one",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MADO System One bounded-decision core",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/test/**/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
