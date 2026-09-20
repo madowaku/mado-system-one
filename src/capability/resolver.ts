@@ -103,7 +103,7 @@ export class CapabilityResolver {
       traceId: wideTraceId,
       pattern: "route",
       state: makeWideState(input.request, available),
-      metadata: input.metadata,
+      ...(input.metadata ? { metadata: input.metadata } : {}),
       questions: {
         needsCapability: {
           type: "noul",
@@ -161,7 +161,7 @@ export class CapabilityResolver {
         input.request,
         topCandidates.map(({ capability }) => capability),
       ),
-      metadata: input.metadata,
+      ...(input.metadata ? { metadata: input.metadata } : {}),
       questions: {
         finalChoice: {
           type: "choice",
