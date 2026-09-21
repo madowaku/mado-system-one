@@ -109,6 +109,11 @@ export interface ChoiceResult {
   distribution: Readonly<Record<string, number>>;
   confidence?: number;
   abstained?: boolean;
+  /**
+   * Probability mass assigned to an explicit provider-side abstain / OTHER option.
+   * Kept separate so the candidate distribution is not falsely renormalized.
+   */
+  abstainProbability?: number;
 }
 
 export interface NoulResult {
