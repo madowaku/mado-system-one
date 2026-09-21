@@ -51,9 +51,19 @@ const validateChoice = (
     assertProbability(result.confidence, "choice confidence");
   }
 
-  const total = Object.values(result.distribution).reduce((sum, value) => sum + value, 0);
+  const candidateTotal = Object.values(result.distribution).reduce((sum, value) => sum + value, 0);
+  const abstainProbability = result.abstainProbability ?? 0;
+  assertProbability(abstainProbability, "choice abstainProbability");
+
+  const total = candidateTotal + abstainProbability;
   if (Object.keys(result.distribution).length > 0 && Math.abs(total - 1) > 1e-6) {
-    throw new ProviderContractError(`choice distribution must sum to 1; got ${total}`);
+    throw new ProviderContractError(
+      `choice distribution plus abstainProbability must sum to 1; got ${total}`,
+    );
+  }
+
+  if (result.abstained === true && result.selected !== null) {
+    throw new ProviderContractError("abstained choice result must have selected = null");
   }
 };
 
