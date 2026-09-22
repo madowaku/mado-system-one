@@ -8,6 +8,7 @@ import {
   MockSystemOneProvider,
   type DecisionRequest,
   type DecisionResponse,
+  type TypedResult,
 } from "../src/index.js";
 
 const registry = new CapabilityRegistry([
