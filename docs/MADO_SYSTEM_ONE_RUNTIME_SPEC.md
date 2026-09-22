@@ -14,7 +14,9 @@ The v0.1 target is deliberately narrow:
 ~~~text
 Intent
   -> Outcome Contract
-  -> Capability references
+  -> Capability requirements
+  -> Capability Pager
+  -> Runtime capability references
   -> Planned Actions
   -> Policy Gate
   -> Tool Adapter
@@ -32,10 +34,13 @@ Intent
 5. REQUIRES_ACTION is a normal resumable state, not a failure.
 6. Tool-specific details stay behind adapters.
 7. Runtime state is explicit and inspectable.
+8. Capability routing remains advisory and never grants execution authority.
+9. NONE stays unresolved. The Pager must not invent an executable target.
+10. Only selected capability details are paged into the Runtime surface.
 
 ## Current implementation slice
 
-v0.1 M0 introduces:
+v0.1 currently includes:
 
 - RuntimeRun and OutcomeContract types
 - explicit ActionRecord and ApprovalRecord
@@ -45,12 +50,15 @@ v0.1 M0 introduces:
 - independent deterministic verifier
 - resumable ASK fixture
 - evidence-failure fixture
+- Capability Pager bridge over CapabilityRegistry / CapabilityResolver
+- multi-requirement capability routing with deduplication
+- unresolved NONE preservation
 
-The initial fixture is intentionally deterministic and does not require a live
-model or external service. Later model-backed planning must preserve these
-contracts rather than bypass them.
+The initial fixtures are intentionally deterministic and do not require a live
+external service. Later Astra/Codex/Jev planning must preserve these contracts
+rather than bypass them.
 
-## M0 smoke acceptance
+## Runtime M0 smoke acceptance
 
 The fixture passes only when:
 
@@ -62,29 +70,51 @@ The fixture passes only when:
 
 A successful command with missing evidence must fail verification.
 
+## Runtime M0.2 Capability Pager bridge
+
+The existing CapabilityResolver remains a bounded advisory router. The Runtime
+adds a Pager above it instead of turning routing confidence into authority.
+
+~~~text
+Outcome capability requirements
+  -> one bounded ROUTE problem per requirement
+  -> wide short catalog
+  -> top-K deep fit
+  -> selected capability
+  -> page selected descriptor only
+  -> deduplicate selections
+  -> RuntimeCapabilityRef[]
+~~~
+
+A Runtime task may need several capabilities, while the existing resolver
+returns one recommendation per bounded routing request. The Pager bridges that
+shape mismatch by resolving several explicit capability requirements.
+
+If the resolver returns NONE, the requirement is recorded as unresolved. The
+Pager does not silently choose an alternative.
+
+Alternatives remain advisory metadata. They are not automatically paged as
+required capabilities and they do not receive execution authority.
+
 ## Next slices
 
-### M0.2 Capability Pager bridge
+### Runtime M0.3 Outcome Compiler
 
-Map the existing CapabilityRegistry / CapabilityResolver output into
-RuntimeCapabilityRef while keeping progressive disclosure.
+Add a structured model adapter that compiles an Intent into an OutcomeContract
+and explicit capability requirements. The deterministic contracts remain the
+test oracle.
 
-### M0.3 Outcome Compiler
-
-Add a structured model adapter that compiles an Intent into an OutcomeContract.
-The deterministic contract remains the test oracle.
-
-### M0.4 Evidence Bundle persistence
+### Runtime M0.4 Evidence Bundle persistence
 
 Persist run.json, actions, approvals, evidence, verification, and a summary
 under a run-scoped workspace.
 
-### M0.5 Typed Action Loop
+### Runtime M0.5 Typed Action Loop
 
 Allow the bounded Decision Plane to choose the next observed action candidate
 without granting execution authority.
 
-### M0.6 Learning Compiler
+### Runtime M0.6 Learning Compiler
 
 Produce provenance-linked memory, skill patch, capability note, or none
 candidates after verified runs.

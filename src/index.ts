@@ -6,6 +6,7 @@ export * from "./context/types.js";
 export * from "./core/provider.js";
 export * from "./core/types.js";
 export * from "./providers/mock.js";
+export * from "./runtime/capability-pager.js";
 export * from "./runtime/policy.js";
 export * from "./runtime/runtime.js";
 export * from "./runtime/types.js";
