@@ -79,7 +79,7 @@ const routingProvider = new MockSystemOneProvider({
       });
     }
 
-    const results: DecisionResponse["results"] = {
+    const results: Record<string, TypedResult> = {
       finalChoice: {
         type: "choice",
         selected,
