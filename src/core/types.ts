@@ -6,6 +6,30 @@ export type ProbabilitySemantics =
   | "provider_defined"
   | "unknown";
 
+export type ConfidenceSemantics =
+  | "selected_probability"
+  | "normalized_entropy"
+  | "margin"
+  | "provider_defined"
+  | "unknown";
+
+export type CalibrationStatus =
+  | "uncalibrated"
+  | "partially_calibrated"
+  | "calibrated"
+  | "unknown";
+
+export type InferenceFamily =
+  | "hosted_proprietary"
+  | "generative_logits"
+  | "encoder_scoring"
+  | "diffusion_structured_read"
+  | "specialist_classifier"
+  | "hybrid"
+  | "unknown";
+
+export type SpecializationLevel = "general" | "domain" | "task";
+
 export type DecisionModality = "text" | "vision" | "text+vision";
 
 export type SystemOnePattern =
@@ -20,6 +44,13 @@ export type SystemOnePattern =
   | "walk"
   | "verify";
 
+export type PatternSupportStatus =
+  | "validated"
+  | "supported"
+  | "experimental"
+  | "unsupported"
+  | "unknown";
+
 export type SystemOneMode =
   | "off"
   | "shadow"
@@ -32,6 +63,21 @@ export type SystemOneMode =
   | "killed";
 
 export type FailBehavior = "bypass" | "fail_closed" | "escalate";
+
+export interface ProviderCalibration {
+  status: CalibrationStatus;
+  method?: string;
+  profileId?: string;
+  datasetId?: string;
+  calibratedAt?: string;
+  notes?: string;
+}
+
+export interface ProviderPatternSupport {
+  status: PatternSupportStatus;
+  evidenceRef?: string;
+  notes?: string;
+}
 
 export interface Candidate<TMetadata extends Record<string, unknown> = Record<string, unknown>> {
   id: string;
@@ -129,6 +175,8 @@ export interface DecisionResponse {
   providerId: string;
   modelId?: string;
   probabilitySemantics: ProbabilitySemantics;
+  confidenceSemantics?: ConfidenceSemantics;
+  calibrationStatus?: CalibrationStatus;
   results: Readonly<Record<string, TypedResult>>;
   latencyMs?: number;
   estimatedCost?: number;
@@ -139,7 +187,12 @@ export interface DecisionResponse {
 export interface ProviderCapabilities {
   primitives: readonly ("choice" | "noul" | "score")[];
   modalities: readonly DecisionModality[];
+  inferenceFamily: InferenceFamily;
+  specialization: SpecializationLevel;
   probabilitySemantics: ProbabilitySemantics;
+  confidenceSemantics: ConfidenceSemantics;
+  calibration: ProviderCalibration;
+  patternSupport?: Partial<Record<SystemOnePattern, ProviderPatternSupport>>;
   supportsBatch?: boolean;
   supportsAdaptiveReads?: boolean;
 }
@@ -156,6 +209,7 @@ export interface CalibrationProfile {
   modelId?: string;
   taskFamily: string;
   probabilitySemantics: ProbabilitySemantics;
+  confidenceSemantics?: ConfidenceSemantics;
   datasetId: string;
   createdAt: string;
   acceptThreshold?: number;
@@ -184,7 +238,10 @@ export interface DecisionTrace {
   mode: SystemOneMode;
   providerId: string;
   modelId?: string;
+  inferenceFamily?: InferenceFamily;
   probabilitySemantics: ProbabilitySemantics;
+  confidenceSemantics?: ConfidenceSemantics;
+  calibrationStatus?: CalibrationStatus;
   observationId?: string;
   candidateSetHash?: string;
   decision: Readonly<Record<string, TypedResult>>;
