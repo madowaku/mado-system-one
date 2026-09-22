@@ -13,8 +13,8 @@ The v0.1 target is deliberately narrow:
 
 ~~~text
 Intent
-  -> Outcome Contract
-  -> Capability requirements
+  -> Outcome Compiler
+  -> Outcome Contract + Capability Requirements
   -> Capability Pager
   -> Runtime capability references
   -> Planned Actions
@@ -37,6 +37,8 @@ Intent
 8. Capability routing remains advisory and never grants execution authority.
 9. NONE stays unresolved. The Pager must not invent an executable target.
 10. Only selected capability details are paged into the Runtime surface.
+11. Outcome compilation defines what must be true, not which concrete tool must win.
+12. The Outcome Compiler must not produce executable actions or grant authority.
 
 ## Current implementation slice
 
@@ -53,10 +55,14 @@ v0.1 currently includes:
 - Capability Pager bridge over CapabilityRegistry / CapabilityResolver
 - multi-requirement capability routing with deduplication
 - unresolved NONE preservation
+- Outcome Compiler adapter boundary
+- contract validation before routing
+- Intent -> Outcome Contract + Capability Requirements fixture
+- Outcome Compiler -> Capability Pager integration fixture
 
-The initial fixtures are intentionally deterministic and do not require a live
-external service. Later Astra/Codex/Jev planning must preserve these contracts
-rather than bypass them.
+The fixtures are intentionally deterministic and do not require a live external
+model. Later Astra/Codex/Jev adapters must preserve these contracts rather than
+bypass them.
 
 ## Runtime M0 smoke acceptance
 
@@ -96,13 +102,59 @@ Pager does not silently choose an alternative.
 Alternatives remain advisory metadata. They are not automatically paged as
 required capabilities and they do not receive execution authority.
 
-## Next slices
+## Runtime M0.3 Outcome Compiler
 
-### Runtime M0.3 Outcome Compiler
+The Outcome Compiler translates a human Intent into a bounded contract for the
+rest of the Runtime.
 
-Add a structured model adapter that compiles an Intent into an OutcomeContract
-and explicit capability requirements. The deterministic contracts remain the
+~~~text
+human intent
+  -> Outcome Compiler Adapter
+  -> Outcome Contract
+     - goal
+     - deliverables
+     - required evidence
+     - constraints
+     - completion criteria
+  -> Capability Requirements
+     - natural-language capability need
+     - reason
+  -> Capability Pager
+~~~
+
+The Compiler does not choose concrete capability IDs. A request such as
+"inspect project state" remains a natural-language capability requirement until
+the M0.2 Pager resolves it against the observed Capability Registry.
+
+The Compiler also does not emit executable actions. Action planning remains a
+later boundary, and Policy remains the authority boundary.
+
+Before a compiled contract enters the Runtime, deterministic validation rejects:
+
+- blank goals or descriptions
+- missing deliverables
+- missing evidence requirements
+- missing completion criteria
+- duplicate deliverable IDs
+- duplicate evidence requirement IDs
+- duplicate completion criterion IDs
+- duplicate capability requirement IDs
+- blank capability requests or reasons
+
+This keeps evidence mapping and later replay unambiguous.
+
+### Adapter boundary
+
+M0.3 introduces OutcomeCompilerAdapter rather than binding Runtime Core to a
+specific model SDK.
+
+A future Astra, Codex, Jev, local model, or deterministic compiler can implement
+the same adapter contract.
+
+The first fixture uses a deterministic adapter so the contract itself is the
 test oracle.
+
+## Next slices
 
 ### Runtime M0.4 Evidence Bundle persistence
 
