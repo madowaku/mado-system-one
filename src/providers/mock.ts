@@ -33,7 +33,17 @@ export class MockSystemOneProvider implements SystemOneProvider {
     this.#capabilities = {
       primitives: options.capabilities?.primitives ?? ["choice", "noul", "score"],
       modalities: options.capabilities?.modalities ?? ["text"],
+      inferenceFamily: options.capabilities?.inferenceFamily ?? "unknown",
+      specialization: options.capabilities?.specialization ?? "general",
       probabilitySemantics: options.capabilities?.probabilitySemantics ?? "heuristic",
+      confidenceSemantics: options.capabilities?.confidenceSemantics ?? "unknown",
+      calibration: options.capabilities?.calibration ?? {
+        status: "uncalibrated",
+        notes: "mock provider probabilities are fixture-defined",
+      },
+      ...(options.capabilities?.patternSupport
+        ? { patternSupport: options.capabilities.patternSupport }
+        : {}),
       supportsBatch: options.capabilities?.supportsBatch ?? false,
       supportsAdaptiveReads: options.capabilities?.supportsAdaptiveReads ?? false,
     };
