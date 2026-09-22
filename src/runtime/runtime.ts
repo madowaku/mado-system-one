@@ -63,9 +63,9 @@ export class SystemOneRuntime {
   }
 
   async execute(run: RuntimeRun): Promise<RuntimeRun> {
-    let current = {
+    let current: RuntimeRun = {
       ...run,
-      status: "running" as const,
+      status: "running",
       updatedAt: this.#now(),
     };
 
