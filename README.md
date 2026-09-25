@@ -94,7 +94,7 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **M0.7** Context Sieve eval pack
 - **M0.8** Structured Read experimental provider
 - **M0.9** Multimodal typed-decision spike
-- **MAF-M0.0** Multi-Agent Forge schema fixture
+- **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
 ## Guiding rules
