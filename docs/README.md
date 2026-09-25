@@ -14,4 +14,10 @@ This directory contains the canonical design documents for MADO System One.
 4. **MADO_SYSTEM_ONE_CONTEXT_PLANE_SPEC.md v0.1**  
    Query-aware context compilation, mandatory preservation, reversible hiding, uncertainty escalation, dynamic Skills / tools / AGENTS.md.
 
+5. **MADO_MULTI_AGENT_FORGE_SPEC.md v0.1**  
+   Contract-first multi-agent production: divergence, jury, ownership leases, builder/reviewer separation, falsification, experience evaluation, and human override.
+
 Architecture should move slowly. The Pattern Atlas can absorb fast-moving application experiments. Operations defines how a decision surface earns trust. Context Plane work should remain recall-first and reversible.
+
+
+Multi-Agent Forge is an orchestration protocol above the existing planes, not a replacement for System One, Harness, Evidence, Policy, or Verifier.
