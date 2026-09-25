@@ -18,6 +18,7 @@ Verifier     = prove
 - docs/MADO_SYSTEM_ONE_PATTERN_ATLAS.md — reusable bounded-decision patterns
 - docs/MADO_SYSTEM_ONE_OPERATIONS.md — shadow rollout, calibration, activation, rollback, specialization
 - docs/MADO_SYSTEM_ONE_CONTEXT_PLANE_SPEC.md — query-aware context compilation and reversible SIEVE
+- docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
 
 ## v0.3 shape
 
@@ -93,6 +94,8 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **M0.7** Context Sieve eval pack
 - **M0.8** Structured Read experimental provider
 - **M0.9** Multimodal typed-decision spike
+- **MAF-M0.0** Multi-Agent Forge schema fixture
+- **MAF-M0.1** Deterministic Forge workflow runner
 
 ## Guiding rules
 
