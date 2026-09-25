@@ -411,9 +411,9 @@ const validateReleaseGate = (value: unknown): void => {
   requireString(record, "rollbackRef", label);
 };
 
-export const validateForgeM0Fixture = (
+export function validateForgeM0Fixture(
   value: unknown,
-): asserts value is ForgeM0Fixture => {
+): asserts value is ForgeM0Fixture {
   const record = requireRecord(value, "fixture");
 
   validateRunState(record.run);
@@ -427,7 +427,7 @@ export const validateForgeM0Fixture = (
   );
   requireArray(record, "humanSignals", "fixture").forEach(validateHumanSignal);
   validateReleaseGate(record.releaseGate);
-};
+}
 
 export const parseForgeM0Fixture = (json: string): ForgeM0Fixture => {
   let parsed: unknown;
