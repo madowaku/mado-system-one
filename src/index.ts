@@ -17,4 +17,8 @@ export * from "./events/spine.js";
 export * from "./events/providers/manual.js";
 export * from "./events/providers/mcp-events.js";
 export * from "./events/providers/polling.js";
-export * from "./harness/agents-api/types.js";\nexport * from "./harness/agents-api/request.js";\nexport * from "./harness/agents-api/transport.js";\nexport * from "./harness/agents-api/harness.js";\n
+
+export * from "./harness/agents-api/types.js";
+export * from "./harness/agents-api/request.js";
+export * from "./harness/agents-api/transport.js";
+export * from "./harness/agents-api/harness.js";
