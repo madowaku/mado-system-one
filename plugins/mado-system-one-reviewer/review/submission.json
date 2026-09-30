@@ -1,0 +1,25 @@
+{
+  "submissionType": "skills_only",
+  "package": "mado-system-one-reviewer",
+  "version": "0.1.0",
+  "developerName": "madowaku",
+  "publisherIdentityStatus": "HUMAN_GATE_VERIFY_IN_OPENAI_PLATFORM",
+  "listing": {
+    "displayName": "MADO Decision Reviewer",
+    "shortDescription": "Audit agent decision loops",
+    "category": "Developer Tools"
+  },
+  "starterPrompts": [
+    "Audit this agent workflow for decision, policy, evidence, and verification gaps.",
+    "Review this router and show where NONE, ABSTAIN, or ESCALATE should exist.",
+    "Check this multi-agent design for unsafe confidence, ownership, and verification assumptions."
+  ],
+  "reviewFixtures": {
+    "positive": "./positive.json",
+    "negative": "./negative.json"
+  },
+  "availabilityStatus": "HUMAN_GATE_SELECT_READY_COUNTRIES",
+  "logoStatus": "HUMAN_GATE_PRODUCTION_ASSET",
+  "securityScanStatus": "PORTAL_GATE",
+  "releaseNotes": "Initial public-submission candidate. Skills-only MADO Decision Reviewer with one focused audit skill, five positive fixtures, three negative fixtures, no MCP server, no authentication, no custom UI, and no external actions."
+}

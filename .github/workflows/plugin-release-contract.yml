@@ -1,0 +1,25 @@
+name: Plugin release contract
+
+on:
+  pull_request:
+    paths:
+      - "plugins/**"
+      - "scripts/validate-plugin-release.mjs"
+      - "package.json"
+      - ".github/workflows/plugin-release-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/**"
+      - "scripts/validate-plugin-release.mjs"
+      - "package.json"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm run plugin:validate

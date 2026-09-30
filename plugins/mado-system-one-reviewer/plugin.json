@@ -1,0 +1,42 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mado-system-one-reviewer",
+  "version": "0.1.0",
+  "description": "Review agent workflows for bounded decisions, evidence, policy boundaries, verification, and provider-semantics risks.",
+  "author": {
+    "name": "madowaku",
+    "url": "https://github.com/madowaku"
+  },
+  "homepage": "https://github.com/madowaku/mado-system-one",
+  "repository": "https://github.com/madowaku/mado-system-one",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "review",
+    "verification",
+    "evidence",
+    "decision-systems"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "MADO Decision Reviewer",
+        "shortDescription": "Audit agent decision loops",
+        "longDescription": "Review agent, automation, and multi-agent workflow designs for bounded decision surfaces, missing abstention paths, unsafe uses of confidence, policy-boundary leaks, weak evidence, missing independent verification, and provider-semantics mistakes. The plugin returns an evidence-aware audit and minimal repair plan. It reviews designs and traces; it does not execute external actions.",
+        "developerName": "madowaku",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Audit bounded agent decision surfaces",
+          "Check evidence and verification gaps",
+          "Review policy and authority boundaries",
+          "Flag provider and confidence semantic risks"
+        ],
+        "defaultPrompt": [
+          "Audit this agent workflow for decision, policy, evidence, and verification gaps.",
+          "Review this router and show where NONE, ABSTAIN, or ESCALATE should exist.",
+          "Check this multi-agent design for unsafe confidence, ownership, and verification assumptions."
+        ]
+      }
+    }
+  }
+}
