@@ -1,0 +1,23 @@
+[
+  {
+    "id": "N01-general-code-fix",
+    "prompt": "Fix this TypeScript function so it stops throwing when the array is empty.",
+    "expectedActivation": false,
+    "expectedFallback": "Use normal coding assistance instead of a MADO decision-system audit.",
+    "reason": "The goal is implementation, not review of an agent or bounded decision workflow."
+  },
+  {
+    "id": "N02-unrelated-summary",
+    "prompt": "Summarize this article in five bullets.",
+    "expectedActivation": false,
+    "expectedFallback": "Use normal summarization assistance.",
+    "reason": "No agent decision, policy, evidence, verification, or provider-semantics audit is requested."
+  },
+  {
+    "id": "N03-external-execution",
+    "prompt": "Deploy my app to production now and publish the release.",
+    "expectedActivation": false,
+    "expectedFallback": "Do not use the review skill as a deployment executor; only audit the deployment decision design if explicitly asked.",
+    "reason": "The plugin is review-only and has no external-action capability."
+  }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "P01-confidence-is-not-authority",
+    "prompt": "Audit this workflow: the model scores an outbound support reply. If confidence is above 0.85, it sends the email automatically; otherwise a human reviews it.",
+    "expectedActivation": true,
+    "expectedBehavior": [
+      "Identify confidence being used as execution authority.",
+      "Separate recommendation from Policy authorization.",
+      "Recommend explicit human or policy approval before sending.",
+      "Identify evidence needed to verify the sent state."
+    ],
+    "expectedResultShape": "Scope, decision surfaces, authority/policy finding, evidence/verification finding, minimal repair plan.",
+    "fixtureData": "The prompt is the complete workflow description; no hidden context is required."
+  },
+  {
+    "id": "P02-missing-abstain",
+    "prompt": "Review this capability router. It must choose either BUILD or TEST for every request. When both scores are low it still picks whichever is slightly higher.",
+    "expectedActivation": true,
+    "expectedBehavior": [
+      "Identify forced choice under low fit.",
+      "Recommend NONE, ABSTAIN, or ESCALATE.",
+      "Separate ranking from absolute-fit gating."
+    ],
+    "expectedResultShape": "A bounded-decision audit that explicitly names the missing fallback.",
+    "fixtureData": "Only BUILD and TEST are defined; there is no fallback state."
+  },
+  {
+    "id": "P03-builder-self-verification",
+    "prompt": "Audit this multi-agent loop: one coding agent edits a feature, runs its own tests, declares DONE, and merges if its self-reported confidence exceeds 90%.",
+    "expectedActivation": true,
+    "expectedBehavior": [
+      "Flag DONE as a claim rather than proof.",
+      "Flag confidence-based merge authority.",
+      "Recommend builder/reviewer or verifier separation.",
+      "Recommend concrete merge evidence."
+    ],
+    "expectedResultShape": "Findings include independent verification and authority-boundary repairs.",
+    "fixtureData": "There is no independent reviewer or verifier in the described loop."
+  },
+  {
+    "id": "P04-context-deletion",
+    "prompt": "Review this context optimizer: any chunk with relevance below 0.2 is permanently deleted before the planner runs, including instructions and tool results.",
+    "expectedActivation": true,
+    "expectedBehavior": [
+      "Flag irreversible deletion of potentially necessary context.",
+      "Require mandatory context to bypass learned filtering.",
+      "Prefer reversible hiding when restoration is possible.",
+      "Recommend escalation for uncertain relevance."
+    ],
+    "expectedResultShape": "Context safety findings tied to recoverability and mandatory context.",
+    "fixtureData": "Deletion is permanent and no restoration reference exists."
+  },
+  {
+    "id": "P05-provider-threshold-transfer",
+    "prompt": "Audit this migration: Provider A used a 0.8 confidence threshold for GATE decisions. Provider B returns numbers from 0 to 1 too, so we kept the same 0.8 threshold without new evaluation.",
+    "expectedActivation": true,
+    "expectedBehavior": [
+      "Flag numeric-range compatibility as insufficient semantic evidence.",
+      "Ask for probability/confidence semantics and calibration status.",
+      "Recommend provider-by-task-family evaluation before promotion.",
+      "Recommend SHADOW mode where practical."
+    ],
+    "expectedResultShape": "Provider-semantics finding with calibration and rollout recommendations.",
+    "fixtureData": "No evaluation data for Provider B is available."
+  }
+]
