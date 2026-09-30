@@ -207,11 +207,28 @@ promotion_rules:
   - "High-consequence false PASS is a primary guard metric."
   - "BYPASS, KILL, and ROLLBACK remain available for active decision surfaces."
 
+completed_milestones:
+  - id: MDD26-M0.0
+    name: "Adoption Baseline"
+  - id: MDD26-M0.1
+    name: "Plugin Release Contract"
+  - id: MDD26-M0.2
+    name: "Event Spine"
+    evidence:
+      - "src/events/types.ts"
+      - "src/events/ledger.ts"
+      - "src/events/spine.ts"
+      - "src/events/providers/manual.ts"
+      - "src/events/providers/polling.ts"
+      - "src/events/providers/mcp-events.ts"
+      - "test/event-spine.test.ts"
+      - "docs/devday-2026/MDD26-M0.2_EVENT_SPINE.md"
+
 next_milestone:
-  id: MDD26-M0.1
-  name: "Plugin Release Contract"
+  id: MDD26-M0.3
+  name: "Agents Harness Spike"
   exit_criteria:
-    - "One MADO capability has a plugin package."
-    - "At least five positive review fixtures exist."
-    - "At least three negative review fixtures exist."
-    - "Release metadata and support/privacy checklist are explicit."
+    - "A read-only repository audit runs through the managed Agents harness."
+    - "Two or three independent subagents have bounded roles."
+    - "Managed-run evidence maps back into MADO Evidence."
+    - "Cost, recovery, and verification are compared against the existing path."
