@@ -20,6 +20,7 @@ Verifier     = prove
 - docs/MADO_SYSTEM_ONE_CONTEXT_PLANE_SPEC.md — query-aware context compilation and reversible SIEVE
 - docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
 - docs/MADO_DEV_DAY_2026_ADOPTION_SPEC.md — DevDay 2026 capability adoption lanes, adapter boundaries, ADRs, and milestones
+- docs/devday-2026/MDD26-M0.2_EVENT_SPINE.md — normalized events, dedupe/idempotency, Policy gate, Verification, and MCP Events adapter
 
 ## v0.3 shape
 
@@ -98,8 +99,8 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 - **MDD26-M0.0** DevDay 2026 adoption baseline ✅
-- **MDD26-M0.1** Plugin Release Contract
-- **MDD26-M0.2** Event Spine
+- **MDD26-M0.1** Plugin Release Contract ✅
+- **MDD26-M0.2** Event Spine ✅
 
 ## Guiding rules
 
@@ -110,3 +111,14 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 ## Status
 
 The project has moved from a single decision layer toward a provider-aware decision + context plane architecture. Interfaces and thresholds remain experimental until validated on MADO workloads.
+
+
+## Event Spine
+
+MDD26-M0.2 adds a provider-neutral event path:
+
+```
+event -> dedupe ledger -> Policy -> task -> Harness -> Verifier -> Evidence
+```
+
+Ingress fixtures currently include manual events, polling fallback, and an MCP Events normalization adapter. Automatic duplicate replay is suppressed before execution.
