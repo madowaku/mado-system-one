@@ -21,6 +21,7 @@ Verifier     = prove
 - docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
 - docs/MADO_DEV_DAY_2026_ADOPTION_SPEC.md — DevDay 2026 capability adoption lanes, adapter boundaries, ADRs, and milestones
 - docs/devday-2026/MDD26-M0.2_EVENT_SPINE.md — normalized events, dedupe/idempotency, Policy gate, Verification, and MCP Events adapter
+- docs/devday-2026/MDD26-M0.3_AGENTS_HARNESS_SPIKE.md — read-only Agents API harness, multi-agent audit, recovery evidence, and bake-off gate
 
 ## v0.3 shape
 
@@ -101,6 +102,7 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **MDD26-M0.0** DevDay 2026 adoption baseline ✅
 - **MDD26-M0.1** Plugin Release Contract ✅
 - **MDD26-M0.2** Event Spine ✅
+- **MDD26-M0.3** Agents Harness Spike 🧪 Luna thrift live gate
 
 ## Guiding rules
 
@@ -122,3 +124,26 @@ event -> dedupe ledger -> Policy -> task -> Harness -> Verifier -> Evidence
 ```
 
 Ingress fixtures currently include manual events, polling fallback, and an MCP Events normalization adapter. Automatic duplicate replay is suppressed before execution.
+
+
+## Agents Harness Spike
+
+MDD26-M0.3 adds an OpenAI Agents API Harness adapter for a deliberately read-only repository audit.
+
+- environment: `none`
+- tools: none
+- bounded multi-agent: up to 3 concurrent subagents
+- repo access: only a selected text snapshot supplied as input
+- runtime completion: never treated as MADO Verification
+- recovery: retrieve session, root items, subagents, and subagent items after streaming
+
+Run a live spike only when API credentials and a model choice are explicitly available:
+
+```bash
+OPENAI_API_KEY=... npm run agents:spike:live
+```
+
+CI validates the adapter and deterministic fixtures. A live run is still required before M0.3 can be promoted as an evidence-backed runtime decision.
+
+
+The M0.3 live runner is intentionally cost-tight: GPT-6 Luna, reasoning none, low verbosity, 2 subagents, 12k-character snapshot, and a $0.05 soft budget warning. It is a soft budget, not an API-side hard cap.

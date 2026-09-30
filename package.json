@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test dist/test/*.test.js",
-    "plugin:validate": "node scripts/validate-plugin-release.mjs plugins/mado-system-one-reviewer"
+    "plugin:validate": "node scripts/validate-plugin-release.mjs plugins/mado-system-one-reviewer",
+    "agents:spike:live": "npm run build && node scripts/run-agents-harness-spike.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -391,7 +391,7 @@ Required behaviors:
 - MCP Events adapter spike,
 - event -> task -> verify -> evidence fixture.
 
-### MDD26-M0.3 - Agents Harness Spike
+### MDD26-M0.3 - Agents Harness Spike 🧪
 
 Goal:
 
@@ -404,6 +404,12 @@ First fixture:
 - independent evidence verification.
 
 Promotion depends on measured complexity, quality, cost and recovery.
+
+#### M0.3 implementation note
+
+The provider-neutral Harness adapter, deterministic transport fixtures, live runner, recovery reads, and bake-off record format are implemented.
+
+M0.3 remains behind a live gate until an authenticated API run provides actual subagent, usage, recovery, and independent-verification evidence. Fixture success must not be presented as managed-runtime quality evidence.
 
 ### MDD26-M0.4 - Browser Computer-Use Fixture
 
