@@ -39,7 +39,7 @@ class FixtureTransport implements AgentsApiTransport {
       turn: {
         usage: {
           input_tokens: 100,
-          cached_input_tokens: 20,
+          input_tokens_details: { cached_tokens: 20 },
           output_tokens: 50,
           total_tokens: 150,
         },
@@ -68,8 +68,7 @@ class FixtureTransport implements AgentsApiTransport {
   > {
     return [
       { id: "sub-architecture" },
-      { id: "sub-tests" },
-      { id: "sub-release" },
+      { id: "sub-evidence-release" },
     ];
   }
 
@@ -90,8 +89,11 @@ test("repo audit request is read-only and enables bounded multi-agent", () => {
 
   assert.equal(request.environment.type, "none");
   assert.equal(request.agent.multi_agent.enabled, true);
-  assert.equal(request.agent.multi_agent.max_concurrent_subagents, 3);
-  assert.match(request.agent.instructions, /exactly three bounded specialist/);
+  assert.equal(request.agent.multi_agent.max_concurrent_subagents, 2);
+  assert.equal(request.agent.reasoning.effort, "none");
+  assert.equal(request.agent.text.verbosity, "low");
+  assert.equal(request.agent.service_tier, "default");
+  assert.match(request.agent.instructions, /exactly two bounded specialist/);
   assert.match(request.agent.instructions, /NOT_PROVEN/);
   assert.match(request.input, /<repository_snapshot>/);
   assert.equal("tools" in request.agent, false);
@@ -109,9 +111,10 @@ test("managed harness collects session, subagent, usage, and recovery evidence",
 
   assert.equal(run.terminalStatus, "completed");
   assert.equal(run.sessionId, "sess-fixture");
-  assert.equal(run.subagentIds.length, 3);
+  assert.equal(run.subagentIds.length, 2);
   assert.equal(run.usage.status, "known");
   assert.equal(run.usage.totalTokens, 150);
+  assert.equal(run.usage.cachedInputTokens, 20);
   assert.equal(run.recovery.sessionRetrieved, true);
   assert.equal(run.recovery.rootItemsRetrieved, true);
   assert.equal(run.recovery.subagentItemsRetrieved, true);

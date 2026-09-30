@@ -3,18 +3,16 @@ import type {
   RepoAuditSessionInput,
 } from "./types.js";
 
+export const MDD26_M0_3_THRIFT_MODEL = "gpt-6-luna" as const;
+
 const roleInstructions = [
   [
-    "architecture-contract-reviewer",
-    "Inspect responsibility boundaries, provider neutrality, Policy/Harness/Verifier separation, and architecture drift.",
+    "architecture-boundary-reviewer",
+    "Inspect responsibility boundaries, provider neutrality, Policy/Harness/Verifier separation, and the single highest-value architecture risk. Return at most 120 words.",
   ],
   [
-    "tests-evidence-reviewer",
-    "Inspect tests, Evidence quality, independent Verification, failure coverage, and claims that are not proven.",
-  ],
-  [
-    "release-operations-reviewer",
-    "Inspect scripts, CI/release readiness, operational rollback/recovery assumptions, and documentation gaps.",
+    "evidence-release-reviewer",
+    "Inspect tests, Evidence, independent Verification, CI/release assumptions, and the single highest-value proof gap. Return at most 120 words.",
   ],
 ] as const;
 
@@ -31,13 +29,13 @@ export const buildReadOnlyRepoAuditSession = (
     throw new Error("snapshotId is required");
   }
 
-  const maxConcurrentSubagents = input.maxConcurrentSubagents ?? 3;
+  const maxConcurrentSubagents = input.maxConcurrentSubagents ?? 2;
   if (
     !Number.isInteger(maxConcurrentSubagents) ||
     maxConcurrentSubagents < 1 ||
-    maxConcurrentSubagents > 3
+    maxConcurrentSubagents > 2
   ) {
-    throw new Error("MDD26-M0.3 allows 1-3 concurrent subagents");
+    throw new Error("MDD26-M0.3 thrift fixture allows 1-2 concurrent subagents");
   }
 
   const roles = roleInstructions
@@ -51,14 +49,26 @@ export const buildReadOnlyRepoAuditSession = (
         "You are running a READ-ONLY MADO repository audit.",
         "Use only the repository snapshot supplied in the user input.",
         "Do not claim to read files, run commands, access GitHub, or mutate state.",
-        "Delegate the audit to exactly three bounded specialist subagents with these roles:",
+        "Delegate the audit to exactly two bounded specialist subagents with these roles:",
         roles,
-        "The three specialist tasks are independent. Wait for their results, then synthesize.",
+        "The two specialist tasks are independent. Wait for their results, then synthesize.",
         "Do not let subagents invent missing repository state.",
         "Mark missing proof as NOT_PROVEN.",
         "A runtime saying DONE is not verification.",
-        "Return a concise final report with: Snapshot, Architecture, Tests & Evidence, Release & Operations, Cross-cutting Findings, NOT_PROVEN, Minimal Repair Plan.",
+        "Use terse bullets. Final synthesis must be at most 250 words.",
+        "Return only: Snapshot, Architecture Boundary, Evidence & Release, NOT_PROVEN, Minimal Repair Plan.",
       ].join("\n"),
+      reasoning: {
+        effort: "none",
+        summary: "concise",
+      },
+      text: {
+        verbosity: "low",
+        format: {
+          type: "text",
+        },
+      },
+      service_tier: "default",
       multi_agent: {
         enabled: true,
         max_concurrent_subagents: maxConcurrentSubagents,

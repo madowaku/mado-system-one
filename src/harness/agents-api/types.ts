@@ -16,6 +16,17 @@ export interface AgentsApiSessionRequest {
   agent: {
     model: string;
     instructions: string;
+    reasoning: {
+      effort: "none";
+      summary: "concise";
+    };
+    text: {
+      verbosity: "low";
+      format: {
+        type: "text";
+      };
+    };
+    service_tier: "default";
     multi_agent: {
       enabled: true;
       max_concurrent_subagents: number;

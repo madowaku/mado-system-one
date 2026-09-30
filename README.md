@@ -101,7 +101,8 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **MAF-M0.1** Deterministic Forge workflow runner
 - **MDD26-M0.0** DevDay 2026 adoption baseline ✅
 - **MDD26-M0.1** Plugin Release Contract ✅
-- **MDD26-M0.2** Event Spine ✅ ✅
+- **MDD26-M0.2** Event Spine ✅
+- **MDD26-M0.3** Agents Harness Spike 🧪 Luna thrift live gate
 
 ## Guiding rules
 
@@ -139,7 +140,10 @@ MDD26-M0.3 adds an OpenAI Agents API Harness adapter for a deliberately read-onl
 Run a live spike only when API credentials and a model choice are explicitly available:
 
 ```bash
-OPENAI_API_KEY=... MADO_AGENTS_MODEL=... npm run agents:spike:live
+OPENAI_API_KEY=... npm run agents:spike:live
 ```
 
 CI validates the adapter and deterministic fixtures. A live run is still required before M0.3 can be promoted as an evidence-backed runtime decision.
+
+
+The M0.3 live runner is intentionally cost-tight: GPT-6 Luna, reasoning none, low verbosity, 2 subagents, 12k-character snapshot, and a $0.05 soft budget warning. It is a soft budget, not an API-side hard cap.

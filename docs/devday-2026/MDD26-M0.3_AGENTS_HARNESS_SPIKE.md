@@ -14,9 +14,8 @@ The spike is deliberately read-only.
 selected repo snapshot
   -> Agents API session
   -> root coordinator
-     -> architecture subagent
-     -> tests/evidence subagent
-     -> release/operations subagent
+     -> architecture-boundary subagent
+     -> evidence-release subagent
   -> managed session/items/subagents
   -> MADO evidence refs
   -> independent MADO Verification
@@ -61,14 +60,15 @@ No function tools, MCP tools, shell, apply-patch, filesystem environment, or ext
 
 The agent receives only an allowlisted text snapshot assembled by the local runner.
 
-The snapshot runner reads:
+The ultra-thrift snapshot allowlist is intentionally tiny:
 
-- README,
 - AGENTS.md,
 - package.json,
-- selected architecture/operations docs,
 - src/index.ts,
-- TypeScript test files.
+- test/agents-harness.test.ts,
+- this M0.3 spike document.
+
+The default snapshot budget is 12,000 characters total and 3,000 characters per file.
 
 It does not recursively expose the repository and does not read `.env` files.
 
@@ -76,17 +76,16 @@ This isolates the value of managed orchestration from the value or risk of manag
 
 ## Bounded multi-agent task
 
-The root coordinator is instructed to delegate exactly three independent review roles:
+The ultra-thrift live fixture delegates exactly two independent review roles:
 
-1. architecture-contract-reviewer
-2. tests-evidence-reviewer
-3. release-operations-reviewer
+1. architecture-boundary-reviewer
+2. evidence-release-reviewer
 
-The root must wait for the specialist results and synthesize them.
+The root waits for both specialists and synthesizes a final response capped by instruction at 250 words. Each specialist is capped by instruction at 120 words.
 
-Missing proof must remain `NOT_PROVEN`.
+The live fixture is locked to `gpt-6-luna`, `reasoning.effort: none`, `text.verbosity: low`, `service_tier: default`, and at most two concurrent subagents.
 
-The spike defaults to a maximum of three concurrent subagents.
+Missing proof remains `NOT_PROVEN`.
 
 ## Runtime versus Verification
 
@@ -161,15 +160,19 @@ Usage status is:
 
 Unknown usage is never converted to zero.
 
-Dollar pricing is intentionally not hard-coded in this repository. Model/tool/container pricing changes over time.
+The generic bake-off contract still permits unknown cost, but the ultra-thrift runner records a dated cost estimate for the fixed Luna experiment.
 
-The bake-off record therefore stores:
+Pricing snapshot used by the runner on 2026-09-30:
 
-```
-estimatedCostUsd: null
-```
+- input: $0.10 / 1M tokens,
+- cached input: $0.01 / 1M tokens,
+- output: $0.50 / 1M tokens.
 
-until current pricing is deliberately applied to observed usage.
+The default soft budget is $0.05.
+
+This is not an API-side hard spend cap. Agents usage is best-effort, pricing can change, and the OpenAI billing/usage dashboard remains authoritative.
+
+The design target is substantially below the soft budget. For example, 30k input plus 4k output tokens at the snapshot rates is about $0.005 before any applicable data-sharing incentive.
 
 ## Bake-off record
 
@@ -208,15 +211,15 @@ Fixture tests prove:
 Prerequisites:
 
 - an OpenAI API key with the required Agents/Responses permissions,
-- an explicitly selected Agents-compatible model.
+- a positive API account balance.
 
-Run:
+The thrift fixture chooses GPT-6 Luna itself:
 
 ```bash
-OPENAI_API_KEY=... \
-MADO_AGENTS_MODEL=... \
-npm run agents:spike:live
+OPENAI_API_KEY=... npm run agents:spike:live
 ```
+
+An attempt to override `MADO_AGENTS_MODEL` with a non-Luna model is rejected by this fixture.
 
 Optional:
 
@@ -225,6 +228,12 @@ MADO_AGENTS_EVIDENCE_OUT=./tmp/mdd26-m0.3-live.json
 ```
 
 The API key stays in the application process and is not included in the repository snapshot or agent environment.
+
+## Complimentary-token note
+
+The fixture does not assume complimentary API usage.
+
+OpenAI currently offers some eligible organizations daily complimentary tokens for shared API inputs/outputs after opting into data sharing. Eligibility must be visible in the organization's Data Controls page, and a positive account balance is still required. Tool use is excluded from that offer, so M0.3 should be budgeted as if it may be billed.
 
 ## Live exit criteria
 

@@ -4,48 +4,41 @@ import path from "node:path";
 
 import {
   AgentsRepoAuditHarness,
+  MDD26_M0_3_THRIFT_MODEL,
   OpenAIAgentsHttpTransport,
   toHarnessBakeoffRecord,
   toManagedHarnessEvidence,
 } from "../dist/src/index.js";
 
 const apiKey = process.env.OPENAI_API_KEY;
-const model = process.env.MADO_AGENTS_MODEL;
+const requestedModel = process.env.MADO_AGENTS_MODEL ?? MDD26_M0_3_THRIFT_MODEL;
+const model = MDD26_M0_3_THRIFT_MODEL;
 
 if (!apiKey) {
   console.error("OPENAI_API_KEY is required for the live Agents API spike.");
   process.exit(2);
 }
-if (!model) {
-  console.error("MADO_AGENTS_MODEL is required. Choose the model explicitly for this bake-off.");
+if (requestedModel !== MDD26_M0_3_THRIFT_MODEL) {
+  console.error(
+    `MDD26-M0.3 thrift fixture is locked to ${MDD26_M0_3_THRIFT_MODEL}; received ${requestedModel}.`,
+  );
   process.exit(2);
 }
 
 const repoRoot = process.cwd();
-const maxTotalChars = Number(process.env.MADO_AGENTS_SNAPSHOT_MAX_CHARS ?? 70000);
-const maxFileChars = Number(process.env.MADO_AGENTS_SNAPSHOT_FILE_CHARS ?? 12000);
+const maxTotalChars = Number(process.env.MADO_AGENTS_SNAPSHOT_MAX_CHARS ?? 12000);
+const maxFileChars = Number(process.env.MADO_AGENTS_SNAPSHOT_FILE_CHARS ?? 3000);
+const softBudgetUsd = Number(process.env.MADO_AGENTS_SOFT_BUDGET_USD ?? 0.05);
 
 const fixedFiles = [
-  "README.md",
   "AGENTS.md",
   "package.json",
   "src/index.ts",
-  "docs/MADO_SYSTEM_ONE_ARCHITECTURE.md",
-  "docs/MADO_SYSTEM_ONE_OPERATIONS.md",
-  "docs/MADO_MULTI_AGENT_FORGE_SPEC.md",
-  "docs/devday-2026/MDD26-M0.2_EVENT_SPINE.md",
+  "test/agents-harness.test.ts",
+  "docs/devday-2026/MDD26-M0.3_AGENTS_HARNESS_SPIKE.md",
 ];
 
-const testDir = path.join(repoRoot, "test");
-const testFiles = fs.existsSync(testDir)
-  ? fs
-      .readdirSync(testDir)
-      .filter((name) => name.endsWith(".test.ts"))
-      .sort()
-      .map((name) => `test/${name}`)
-  : [];
-
-const candidates = [...fixedFiles, ...testFiles];
+const candidates = fixedFiles;
 let remaining = maxTotalChars;
 const sections = [];
 
@@ -85,16 +78,44 @@ const run = await harness.run({
   model,
   snapshot,
   snapshotId,
-  maxConcurrentSubagents: 3,
+  maxConcurrentSubagents: 2,
 });
 const finishedAt = new Date().toISOString();
 
 const evidence = toManagedHarnessEvidence(run);
+
+const lunaPricingSnapshot = {
+  asOf: "2026-09-30",
+  serviceTier: "default",
+  inputPerMillion: 0.10,
+  cachedInputPerMillion: 0.01,
+  outputPerMillion: 0.50,
+};
+
+const usageCostEstimate = (() => {
+  if (
+    run.usage.inputTokens === undefined ||
+    run.usage.outputTokens === undefined
+  ) {
+    return null;
+  }
+  const cached = Math.min(
+    run.usage.cachedInputTokens ?? 0,
+    run.usage.inputTokens,
+  );
+  const uncached = Math.max(0, run.usage.inputTokens - cached);
+  return (
+    (uncached / 1_000_000) * lunaPricingSnapshot.inputPerMillion +
+    (cached / 1_000_000) * lunaPricingSnapshot.cachedInputPerMillion +
+    (run.usage.outputTokens / 1_000_000) * lunaPricingSnapshot.outputPerMillion
+  );
+})();
+
 const bakeoff = toHarnessBakeoffRecord(run, {
   runtime: "openai-agents-api-live",
   notes: [
     "Independent MADO Verification is still required.",
-    "Apply current model/tool/container prices externally; the repository does not hard-code price tables.",
+    "This thrift fixture records a dated Luna standard-price estimate only; billing dashboards remain authoritative.",
   ],
 });
 
@@ -111,7 +132,20 @@ const full = {
   },
   run,
   evidence,
-  bakeoff,
+  budget: {
+    mode: "soft",
+    targetUsd: softBudgetUsd,
+    estimatedUsd: usageCostEstimate,
+    exceeded:
+      usageCostEstimate === null ? null : usageCostEstimate > softBudgetUsd,
+    pricingSnapshot: lunaPricingSnapshot,
+    caveat:
+      "Soft budget only. Agents usage is best-effort and this is not an API-side hard spend cap.",
+  },
+  bakeoff: {
+    ...bakeoff,
+    estimatedCostUsd: usageCostEstimate,
+  },
 };
 
 const summary = {
@@ -129,10 +163,21 @@ const summary = {
     recovery: run.recovery,
   },
   evidence,
-  bakeoff,
+  budget: full.budget,
+  bakeoff: full.bakeoff,
 };
 
 console.log(JSON.stringify(summary, null, 2));
+
+if (full.budget.exceeded === true) {
+  console.error(
+    "WARN: estimated Luna usage $" +
+      full.budget.estimatedUsd.toFixed(6) +
+      " exceeded soft budget $" +
+      softBudgetUsd.toFixed(2) +
+      ".",
+  );
+}
 
 const out = process.env.MADO_AGENTS_EVIDENCE_OUT;
 if (out) {

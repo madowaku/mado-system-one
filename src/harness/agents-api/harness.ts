@@ -86,11 +86,16 @@ const addUsage = (
   usage: Readonly<Record<string, unknown>>,
 ): void => {
   const input = finiteNumber(usage, "input_tokens", "inputTokens");
-  const cached = finiteNumber(
-    usage,
-    "cached_input_tokens",
-    "cachedInputTokens",
-  );
+  const inputDetails = isRecord(usage.input_tokens_details)
+    ? usage.input_tokens_details
+    : isRecord(usage.inputTokensDetails)
+      ? usage.inputTokensDetails
+      : null;
+  const cached =
+    finiteNumber(usage, "cached_input_tokens", "cachedInputTokens") ??
+    (inputDetails
+      ? finiteNumber(inputDetails, "cached_tokens", "cachedTokens")
+      : undefined);
   const output = finiteNumber(usage, "output_tokens", "outputTokens");
   const total = finiteNumber(usage, "total_tokens", "totalTokens");
 
