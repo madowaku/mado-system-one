@@ -232,3 +232,23 @@ next_milestone:
     - "Two or three independent subagents have bounded roles."
     - "Managed-run evidence maps back into MADO Evidence."
     - "Cost, recovery, and verification are compared against the existing path."
+
+
+implementation_status:
+  - id: MDD26-M0.3
+    name: "Agents Harness Spike"
+    status: "live_gate"
+    implemented:
+      - "src/harness/agents-api/types.ts"
+      - "src/harness/agents-api/request.ts"
+      - "src/harness/agents-api/transport.ts"
+      - "src/harness/agents-api/harness.ts"
+      - "test/agents-harness.test.ts"
+      - "scripts/run-agents-harness-spike.mjs"
+    live_exit_criteria:
+      - "One API-backed read-only repository audit reaches a terminal turn."
+      - "Expected bounded subagent delegation is observed in saved session data."
+      - "Root and subagent items are captured as MADO evidence references."
+      - "Independent MADO Verification evaluates the audit output."
+      - "Token usage and current-price cost are compared with an existing-path baseline."
+      - "Recovery after stream loss is exercised or explicitly marked not proven."
