@@ -1,0 +1,217 @@
+version: "0.1"
+date: "2026-09-30"
+milestone: "MDD26-M0.0"
+source_baseline:
+  - "https://openai.com/index/devday-2026-recap/"
+  - "https://developers.openai.com/plugins"
+  - "https://developers.openai.com/api/docs/guides/agents-api/overview"
+
+lanes:
+  adopt_now:
+    meaning: "Adopt as architecture, release discipline, or repository hygiene now."
+  experiment:
+    meaning: "Run bounded fixtures behind provider-neutral contracts before promotion."
+  watch:
+    meaning: "Track capability maturity without making core architecture depend on it."
+  ignore_for_now:
+    meaning: "No current MADO bottleneck justifies implementation work."
+
+announcements:
+  - id: plugin_creation_submission_discovery
+    name: "Improved plugin creation, submission, and discovery"
+    lane: adopt_now
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.1
+    rationale: "Directly improves distribution of skills and MCP-backed MADO capabilities."
+
+  - id: mcp_events
+    name: "MCP Events"
+    lane: adopt_now
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.2
+    rationale: "Natural ingress adapter for an event-first MADO runtime."
+
+  - id: gpt_6_1_sol
+    name: "GPT-6.1 Sol"
+    lane: adopt_now
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.6
+    rationale: "High-capability default candidate, but promotion requires MADO fixture evidence."
+
+  - id: codex_cloud
+    name: "Codex in the cloud"
+    lane: adopt_now
+    owner_repo: mado-system-one
+    milestone: operational
+    rationale: "Rewards reproducible environments and restartable agent-ready repositories."
+
+  - id: codex_cli_agents
+    name: "Refreshed Codex CLI and /agents"
+    lane: adopt_now
+    owner_repo: mado-system-one
+    milestone: operational
+    rationale: "Fits bounded multi-agent operations and Multi-Agent Forge."
+
+  - id: plugin_extensions
+    name: "Plugin extensions and interactive UI"
+    lane: experiment
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.7
+    rationale: "Evidence Viewer is a concrete UI experiment with portable underlying state."
+
+  - id: agents_api
+    name: "Agents API"
+    lane: experiment
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.3
+    rationale: "May reduce custom orchestration while retaining Policy, Evidence and Verification."
+
+  - id: agents_api_computer_use
+    name: "Agents API computer use"
+    lane: experiment
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.4
+    rationale: "First fixture is limited to the documented hosted-browser environment."
+
+  - id: decisions_api
+    name: "Decisions API"
+    lane: experiment
+    owner_repo: mado-system-one
+    milestone: MDD26-M0.5
+    rationale: "Strong fit for finite System One surfaces if false-pass behavior is acceptable."
+
+  - id: codex_security_cloud
+    name: "Codex Security Cloud"
+    lane: experiment
+    owner_repo: mado-system-one
+    milestone: future
+    rationale: "Potential repo-fleet security layer; compare against current controls first."
+
+  - id: sites_plugins
+    name: "Sites with Plugins"
+    lane: experiment
+    owner_repo: mado-vibe-shipping
+    milestone: after_MDD26-M0.1
+    rationale: "Potential low-friction product surface after the first plugin is validated."
+
+  - id: code_review
+    name: "Codex Code Review"
+    lane: experiment
+    owner_repo: mado-system-one
+    milestone: operational_eval
+    rationale: "Useful secondary review surface, but builder/reviewer/verifier separation remains."
+
+  - id: dots
+    name: "Dots"
+    lane: watch
+    owner_repo: mado-system-one
+    milestone: watch
+    rationale: "Potential high-level operator, but durable MADO contracts should remain portable."
+
+  - id: chatgpt_space
+    name: "ChatGPT Space"
+    lane: watch
+    owner_repo: mado-system-one
+    milestone: watch
+    rationale: "Potential cockpit surface; avoid making core state dependent on it yet."
+
+  - id: pages
+    name: "Pages"
+    lane: watch
+    owner_repo: mado-system-one
+    milestone: watch
+    rationale: "Useful human-agent artifact surface, not an authoritative evidence store yet."
+
+  - id: team_tasks
+    name: "Team Tasks"
+    lane: watch
+    owner_repo: mado-system-one
+    milestone: watch
+    rationale: "Could become a scheduler surface if audit, retry and API semantics are sufficient."
+
+  - id: ultrafast
+    name: "Ultrafast"
+    lane: watch
+    owner_repo: mado-system-one
+    milestone: watch
+    rationale: "Use only when measured latency is the bottleneck."
+
+  - id: shareable_profiles
+    name: "Shareable profiles"
+    lane: watch
+    owner_repo: mado-system-one
+    milestone: watch
+    rationale: "Distribution surface becomes relevant after a plugin has demonstrated value."
+
+  - id: sign_in_with_chatgpt
+    name: "Sign in with ChatGPT"
+    lane: watch
+    owner_repo: mado-vibe-shipping
+    milestone: watch
+    rationale: "Potential auth-friction reducer for external products."
+
+  - id: bedrock_managed_agents
+    name: "Bedrock Managed Agents"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "No current AWS-native deployment requirement."
+
+  - id: private_intelligence
+    name: "Private Intelligence"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "Important enterprise capability but not a current MADO bottleneck."
+
+  - id: collaborative_slides
+    name: "Collaborative slides"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "Useful output feature but not a runtime primitive."
+
+  - id: chatgpt_team_chat
+    name: "@ChatGPT in Slack and Microsoft Teams"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "Potential notification surface, not central to current development."
+
+  - id: meetings_plugin
+    name: "Meetings plugin"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "Low overlap with current MADO loops."
+
+  - id: pro_tier
+    name: "New Pro tier"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "MADO should not architect around an account subscription tier."
+
+  - id: openai_marketplace
+    name: "OpenAI Marketplace"
+    lane: ignore_for_now
+    owner_repo: none
+    milestone: none
+    rationale: "Enterprise procurement is premature until repeatable product demand exists."
+
+promotion_rules:
+  - "New provider-backed decision surfaces begin in SHADOW where practical."
+  - "Confidence never grants execution authority."
+  - "Provider/model provenance is recorded."
+  - "Decision is not verification."
+  - "High-consequence false PASS is a primary guard metric."
+  - "BYPASS, KILL, and ROLLBACK remain available for active decision surfaces."
+
+next_milestone:
+  id: MDD26-M0.1
+  name: "Plugin Release Contract"
+  exit_criteria:
+    - "One MADO capability has a plugin package."
+    - "At least five positive review fixtures exist."
+    - "At least three negative review fixtures exist."
+    - "Release metadata and support/privacy checklist are explicit."

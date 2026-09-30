@@ -19,6 +19,7 @@ Verifier     = prove
 - docs/MADO_SYSTEM_ONE_OPERATIONS.md — shadow rollout, calibration, activation, rollback, specialization
 - docs/MADO_SYSTEM_ONE_CONTEXT_PLANE_SPEC.md — query-aware context compilation and reversible SIEVE
 - docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
+- docs/MADO_DEV_DAY_2026_ADOPTION_SPEC.md — DevDay 2026 capability adoption lanes, adapter boundaries, ADRs, and milestones
 
 ## v0.3 shape
 
@@ -96,6 +97,9 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **M0.9** Multimodal typed-decision spike
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
+- **MDD26-M0.0** DevDay 2026 adoption baseline ✅
+- **MDD26-M0.1** Plugin Release Contract
+- **MDD26-M0.2** Event Spine
 
 ## Guiding rules
 
