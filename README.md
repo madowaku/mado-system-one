@@ -157,6 +157,41 @@ mso compare fixture.jsonl --providers replay,laya,jev
 
 without changing the comparison schema.
 
+## Disagreement Lab
+
+MSO-LAYA-M0.3 turns comparison mismatches into a human-review queue.
+
+~~~bash
+npm run mso -- disagreements fixtures/eval/smoke.jsonl \
+  --providers replay,laya \
+  --pair replay:laya \
+  --focus laya \
+  --high-confidence 0.8
+~~~
+
+The lab writes two artifacts:
+
+- a compact summary JSON with priority/category/slice counts
+- a JSONL review queue with one disagreement per line
+
+Each review row restores the original fixture context:
+
+- state, typed question, expected answer
+- task family, tags, and language
+- both provider answers and confidences
+- pairwise correctness/agreement metadata
+- review priority and category
+- a conservative `fineTuneCandidate` flag that still requires human review
+
+Priority is intentionally asymmetric around the selected `--focus` provider:
+
+- **P0**: focus provider error, or focus provider is wrong with high confidence while the other provider is correct
+- **P1**: focus provider is wrong, or both providers are wrong
+- **P2**: the other provider is wrong or unavailable while focus is usable
+- **P3**: both are correct but disagree under the stricter comparison tolerance
+
+`both_wrong` is routed to ground-truth review rather than training by default. Agreement is evidence, not authority.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -174,7 +209,8 @@ without changing the comparison schema.
 - **MSO-LAYA-M0.0** Provider-neutral Eval Skeleton ✅
 - **MSO-LAYA-M0.1** Laya Adapter ✅
 - **MSO-LAYA-M0.2** Replay vs Laya Tri-Runner ✅
-- **MSO-LAYA-M0.3** Disagreement Lab
+- **MSO-LAYA-M0.3** Disagreement Lab ✅
+- **MSO-LAYA-M0.4** Real Shadow Bridge
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

@@ -7,6 +7,10 @@ import {
   writeComparisonEvidence,
 } from "./eval/compare.js";
 import {
+  buildDisagreementLab,
+  writeDisagreementLab,
+} from "./eval/disagreement.js";
+import {
   parseEvalJsonl,
   replayRecordsFromCases,
   runEval,
@@ -21,8 +25,10 @@ const usage = (): never => {
     "Usage:\n" +
       "  mso eval <fixture.jsonl> [--provider replay|laya] [--out <evidence.json>] [--dataset <id>]\n" +
       "  mso compare <fixture.jsonl> [--providers replay,laya] [--out <comparison.json>] [--dataset <id>]\n" +
+      "  mso disagreements <fixture.jsonl> [--providers replay,laya] [--pair replay:laya] [--focus laya] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
-      "Compare option: [--score-tolerance <number>]",
+      "Compare options: [--score-tolerance <number>]\n" +
+      "Disagreement option: [--high-confidence <0..1>]",
   );
   process.exit(2);
 };
@@ -91,6 +97,64 @@ const main = async (): Promise<void> => {
       `provider=${run.providerId} dataset=${run.datasetId} cases=${run.metrics.cases} accuracy=${accuracy}% errors=${run.metrics.providerErrors}`,
     );
     console.log(`evidence=${outPath}`);
+    return;
+  }
+
+  if (command === "disagreements") {
+    const providerNames = (optionValue(args, "--providers") ?? "replay,laya")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (providerNames.length < 2) {
+      throw new Error("--providers requires at least two comma-separated providers");
+    }
+
+    const pairRaw =
+      optionValue(args, "--pair") ?? `${providerNames[0]}:${providerNames[1]}`;
+    const pairParts = pairRaw.split(":").map((item) => item.trim()).filter(Boolean);
+    const leftProvider = pairParts[0];
+    const rightProvider = pairParts[1];
+    if (!leftProvider || !rightProvider || pairParts.length !== 2) {
+      throw new Error("--pair must be formatted as left:right");
+    }
+
+    const providers: SystemOneProvider[] = [];
+    for (const name of providerNames) {
+      providers.push(await createProvider(name, loaded.cases, args));
+    }
+
+    const scoreAgreementTolerance = numericOption(args, "--score-tolerance");
+    const evidence = await runComparison(providers, loaded.cases, {
+      datasetId,
+      ...(scoreAgreementTolerance === undefined
+        ? {}
+        : { scoreAgreementTolerance }),
+    });
+
+    const focusProvider = optionValue(args, "--focus") ?? rightProvider;
+    const highConfidenceThreshold = numericOption(args, "--high-confidence");
+    const lab = buildDisagreementLab(evidence, loaded.cases, {
+      leftProvider,
+      rightProvider,
+      focusProvider,
+      ...(highConfidenceThreshold === undefined
+        ? {}
+        : { highConfidenceThreshold }),
+    });
+
+    const summaryPath =
+      optionValue(args, "--out") ??
+      `evidence/disagreements/${lab.labId}.json`;
+    const queuePath =
+      optionValue(args, "--queue") ??
+      `evidence/disagreements/${lab.labId}.jsonl`;
+    await writeDisagreementLab(summaryPath, queuePath, lab);
+
+    console.log(
+      `pair=${leftProvider}:${rightProvider} focus=${focusProvider} disagreements=${lab.summary.total} p0=${lab.summary.byPriority.p0} p1=${lab.summary.byPriority.p1} p2=${lab.summary.byPriority.p2} p3=${lab.summary.byPriority.p3}`,
+    );
+    console.log(`summary=${summaryPath}`);
+    console.log(`queue=${queuePath}`);
     return;
   }
 
