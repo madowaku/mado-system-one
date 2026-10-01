@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test dist/test/*.test.js"
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "mso": "npm run build --silent && node dist/src/cli.js",
+    "eval:smoke": "npm run mso -- eval fixtures/eval/smoke.jsonl --out evidence/eval/smoke.json"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
