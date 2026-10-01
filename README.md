@@ -82,7 +82,7 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 
 ## Eval skeleton
 
-MSO-LAYA-M0.0 adds a provider-neutral evaluation spine. It intentionally does not depend on Laya yet.
+MSO-LAYA-M0.0 adds a provider-neutral evaluation spine.
 
 ~~~
 JSONL fixture
@@ -104,6 +104,31 @@ npm run eval:smoke
 
 The replay provider exists to test the harness itself before live providers are attached. Provider failures are captured per case so one bad decision does not destroy the whole evaluation run.
 
+## Laya adapter
+
+MSO-LAYA-M0.1 maps the existing MADO provider contract to Laya's TypeScript runtime.
+
+The adapter keeps Laya optional so ordinary installs and CI do not pull model runtime dependencies. For a live local eval, install the peer explicitly:
+
+~~~
+npm install laya-ts
+npm run mso -- eval fixtures/eval/smoke.jsonl --provider laya
+~~~
+
+Optional routing controls:
+
+~~~
+npm run mso -- eval fixtures/eval/smoke.jsonl   --provider laya   --model english   --lang en
+~~~
+
+Important semantics:
+
+- MADO `choice.confidence` receives Laya `answer_confidence`, not Laya's entropy-based `confidence`.
+- Laya local inference is recorded as estimated API cost `0`.
+- MADO score ranges are translated to Laya's zero-based score levels and mapped back after inference.
+- Non-integer MADO score bounds are rejected by the adapter rather than silently distorted.
+- Laya remains experimental until MADO workload calibration and shadow evidence justify promotion.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -119,7 +144,8 @@ The replay provider exists to test the harness itself before live providers are 
 - **M0.8** Structured Read experimental provider
 - **M0.9** Multimodal typed-decision spike
 - **MSO-LAYA-M0.0** Provider-neutral Eval Skeleton ✅
-- **MSO-LAYA-M0.1** Laya Adapter
+- **MSO-LAYA-M0.1** Laya Adapter ✅
+- **MSO-LAYA-M0.2** Replay vs Laya Tri-Runner
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
