@@ -268,9 +268,9 @@ export const fromLayaAnswers = (
 export class LayaSystemOneProvider implements SystemOneProvider {
   readonly id: string;
   readonly #runner: LayaRunner;
-  readonly #model?: string;
-  readonly #language?: string;
-  readonly #minConfidence?: number;
+  readonly #model: string | undefined;
+  readonly #language: string | undefined;
+  readonly #minConfidence: number | undefined;
 
   constructor(options: LayaProviderOptions) {
     this.id = options.id ?? "laya";
