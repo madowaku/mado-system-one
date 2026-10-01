@@ -60,6 +60,16 @@ Record:
 
 Shadow traces are evidence, not labels.
 
+Implementation invariant for the runtime bridge:
+
+- the incumbent provider remains authoritative,
+- shadow inference must not delay the incumbent response,
+- shadow failure must not fail the incumbent request,
+- incumbent failure must not be replaced by a shadow answer,
+- live traces record `labelsKnown: false`,
+- disagreement review requires a human or verified downstream outcome before becoming ground truth,
+- full live input capture requires explicit redaction; minimal capture is the default.
+
 ## 4. CALIBRATING
 
 Use representative target-workload traces to set:
