@@ -193,18 +193,56 @@ A useful trace records:
 
 ## 13. Promotion criteria
 
-SHADOW to CALIBRATING requires representative traces and known disagreement cases.
+Promotion is evidence-driven and scoped to one decision surface.
 
-CALIBRATING to ACTIVE_LIMITED requires:
+The MSO promotion gate uses the following evidence ladder:
 
-- known threshold profile,
-- known abstain behavior,
+~~~text
+experimental
+  -> shadow
+  -> candidate
+  -> promoted
+~~~
+
+This ladder is an evaluation/adoption state and does not itself mutate the runtime SystemOneMode.
+
+**experimental -> shadow** requires labeled offline evidence that meets the decision-surface policy for:
+
+- minimum case count,
+- minimum accuracy,
+- maximum provider error rate.
+
+**shadow -> candidate** requires representative live shadow evidence that meets the policy for:
+
+- minimum shadow traces,
+- minimum comparable questions,
+- agreement floor,
+- provider error ceiling,
+- high-confidence disagreement ceiling,
+- disagreement review coverage,
+- optional latency and shadow-lag budgets.
+
+Agreement is a stability signal only. Live shadow traces record `labelsKnown: false`.
+
+**candidate -> promoted** additionally requires:
+
+- enough reviewed or verified disagreement labels,
+- acceptable candidate accuracy on those reviewed disagreement cases,
 - tested fallback,
 - tested kill switch,
-- baseline comparison,
-- redaction checks.
+- checked redaction path,
+- attached threshold profile,
+- recorded rollback target.
 
-ACTIVE_LIMITED to ACTIVE requires downstream non-regression and acceptable false-allow / false-drop behavior.
+A passing gate emits eligibility evidence only. It must record `automaticPromotion: false` and must not silently change provider authority.
+
+Thresholds are defined per decision surface. There is no universal provider-wide promotion threshold.
+
+The runtime lifecycle still maps separately:
+
+- SHADOW to CALIBRATING requires representative traces and known disagreement cases.
+- CALIBRATING to ACTIVE_LIMITED requires a known threshold profile, known abstain behavior, tested fallback, tested kill switch, baseline comparison, and redaction checks.
+- ACTIVE_LIMITED to ACTIVE requires downstream non-regression and acceptable false-allow / false-drop behavior.
 
 ## 14. Rollback
 
