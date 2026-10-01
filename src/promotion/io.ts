@@ -64,6 +64,14 @@ export const parsePromotionPolicy = (value: unknown): PromotionPolicy => {
         t.maxShadowProviderErrorRate,
         "thresholds.maxShadowProviderErrorRate",
       ),
+      highConfidenceThreshold: number(
+        t.highConfidenceThreshold,
+        "thresholds.highConfidenceThreshold",
+      ),
+      maxHighConfidenceDisagreementRate: number(
+        t.maxHighConfidenceDisagreementRate,
+        "thresholds.maxHighConfidenceDisagreementRate",
+      ),
       minDisagreementReviewCoverage: number(
         t.minDisagreementReviewCoverage,
         "thresholds.minDisagreementReviewCoverage",
@@ -90,6 +98,14 @@ export const parsePromotionPolicy = (value: unknown): PromotionPolicy => {
             maxP95ShadowLagMs: number(
               t.maxP95ShadowLagMs,
               "thresholds.maxP95ShadowLagMs",
+            ),
+          }),
+      ...(t.maxP95LatencyRatio === undefined
+        ? {}
+        : {
+            maxP95LatencyRatio: number(
+              t.maxP95LatencyRatio,
+              "thresholds.maxP95LatencyRatio",
             ),
           }),
     },
