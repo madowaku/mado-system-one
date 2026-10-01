@@ -238,6 +238,40 @@ evidence/shadow/review.jsonl  # disagreements / provider failures only
 
 This is intentionally different from offline eval. Live shadow traffic has no oracle label, so the bridge records agreement, confidence deltas, answer deltas, latency, and failures without pretending to know which provider is correct.
 
+## Promotion Gate
+
+MSO-LAYA-M0.5 turns offline eval, real shadow traces, reviewed disagreements, and operational controls into an explicit promotion-eligibility artifact.
+
+~~~bash
+npm run mso -- promotion-check \
+  --policy fixtures/promotion/asset-qa-laya.example-policy.json \
+  --eval evidence/eval/laya-asset-qa.json \
+  --shadow evidence/shadow/live.jsonl \
+  --reviews evidence/shadow/reviews-reviewed.jsonl \
+  --controls fixtures/promotion/asset-qa-laya.example-controls.json \
+  --out evidence/promotion/asset-qa-laya-gate.json
+~~~
+
+The gate evaluates three transitions without changing runtime state:
+
+~~~text
+experimental -> shadow
+shadow       -> candidate
+candidate    -> promoted
+~~~
+
+The evidence contains the maximum eligible stage, every individual check, measured values, required thresholds, and blocking reasons. It always records `automaticPromotion: false`.
+
+The stages use different evidence:
+
+- **experimental -> shadow**: labeled offline cases, accuracy, and provider error rate
+- **shadow -> candidate**: live exposure, comparable-question coverage, agreement, provider errors, high-confidence disagreement rate, disagreement review coverage, and optional latency budgets
+- **candidate -> promoted**: verified disagreement labels plus fallback, kill-switch, redaction, threshold-profile, and rollback attestations
+
+Raw live agreement is never treated as correctness. A candidate can reach `candidate` with strong shadow stability, but it cannot become promotion-eligible without reviewed/verified labels and operational controls.
+
+Promotion policy thresholds are explicit per decision surface. There are no built-in universal Laya thresholds. The files under `fixtures/promotion/` are examples for schema and workflow only, not production defaults.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -257,7 +291,8 @@ This is intentionally different from offline eval. Live shadow traffic has no or
 - **MSO-LAYA-M0.2** Replay vs Laya Tri-Runner ✅
 - **MSO-LAYA-M0.3** Disagreement Lab ✅
 - **MSO-LAYA-M0.4** Real Shadow Bridge ✅
-- **MSO-LAYA-M0.5** Promotion Gate
+- **MSO-LAYA-M0.5** Promotion Gate ✅
+- **MSO-LAYA-M0.6** Fine-tune Candidate
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
