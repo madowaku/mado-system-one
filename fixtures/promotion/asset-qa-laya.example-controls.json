@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "mso.promotion-controls.v0",
+  "fallbackTested": true,
+  "killSwitchTested": true,
+  "redactionChecked": true,
+  "thresholdProfileId": "asset-qa-laya-thresholds-v1",
+  "rollbackTarget": "incumbent-provider",
+  "attestedAt": "2026-10-01T00:00:00.000Z"
+}
