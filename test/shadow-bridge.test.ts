@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type {
   DecisionRequest,
@@ -7,6 +10,7 @@ import type {
 import { MockSystemOneProvider } from "../src/providers/mock.js";
 import {
   MemoryShadowEvidenceSink,
+  PartitionedShadowEvidenceSink,
   ShadowBridge,
 } from "../src/shadow/bridge.js";
 
@@ -222,4 +226,56 @@ test("minimal capture excludes state, questions, and free-form metadata", async 
   assert.equal(snapshot.state, undefined);
   assert.equal(snapshot.questions, undefined);
   assert.equal(snapshot.metadata, undefined);
+});
+
+
+test("partitioned sink keeps full traces separate from the review queue", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "mso-shadow-"));
+  try {
+    const tracePath = join(dir, "all.jsonl");
+    const reviewPath = join(dir, "review.jsonl");
+    const sink = new PartitionedShadowEvidenceSink({
+      tracePath,
+      reviewQueuePath: reviewPath,
+    });
+    const incumbent = new MockSystemOneProvider({
+      id: "incumbent",
+      responder: choiceResponse("incumbent", "accept", 0.9),
+    });
+    const agreeingShadow = new MockSystemOneProvider({
+      id: "laya",
+      responder: choiceResponse("laya", "accept", 0.85),
+    });
+    const bridge = new ShadowBridge({ incumbent, shadow: agreeingShadow, sink });
+
+    await bridge.decide(request);
+    await bridge.flush();
+
+    const allLines = (await readFile(tracePath, "utf8")).trim().split("\n");
+    assert.equal(allLines.length, 1);
+    await assert.rejects(() => readFile(reviewPath, "utf8"), /ENOENT/);
+
+    const disagreeingShadow = new MockSystemOneProvider({
+      id: "laya-2",
+      responder: choiceResponse("laya-2", "reject", 0.9),
+    });
+    const bridge2 = new ShadowBridge({
+      incumbent,
+      shadow: disagreeingShadow,
+      sink,
+    });
+    await bridge2.decide({ ...request, traceId: "live:asset:002" });
+    await bridge2.flush();
+
+    const allLinesAfter = (await readFile(tracePath, "utf8")).trim().split("\n");
+    const reviewLines = (await readFile(reviewPath, "utf8")).trim().split("\n");
+    assert.equal(allLinesAfter.length, 2);
+    assert.equal(reviewLines.length, 1);
+    const queued = JSON.parse(reviewLines[0] ?? "{}") as {
+      review?: { needed?: boolean };
+    };
+    assert.equal(queued.review?.needed, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
