@@ -11,6 +11,7 @@ export * from "./providers/replay.js";
 export * from "./eval/skeleton.js";
 export * from "./eval/compare.js";
 export * from "./eval/disagreement.js";
+export * from "./shadow/bridge.js";
 
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";
