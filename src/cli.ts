@@ -1,18 +1,28 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
+import type { SystemOneProvider } from "./core/provider.js";
+import {
+  runComparison,
+  writeComparisonEvidence,
+} from "./eval/compare.js";
 import {
   parseEvalJsonl,
   replayRecordsFromCases,
   runEval,
   writeEvalEvidence,
+  type EvalCase,
 } from "./eval/skeleton.js";
 import { createLayaTsProvider } from "./providers/laya.js";
 import { ReplaySystemOneProvider } from "./providers/replay.js";
 
 const usage = (): never => {
   console.error(
-    "Usage: mso eval <fixture.jsonl> [--out <evidence.json>] [--dataset <id>] [--provider replay|laya] [--model <name>] [--lang <code>] [--min-confidence <0..1>]",
+    "Usage:\n" +
+      "  mso eval <fixture.jsonl> [--provider replay|laya] [--out <evidence.json>] [--dataset <id>]\n" +
+      "  mso compare <fixture.jsonl> [--providers replay,laya] [--out <comparison.json>] [--dataset <id>]\n" +
+      "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
+      "Compare option: [--score-tolerance <number>]",
   );
   process.exit(2);
 };
@@ -32,42 +42,94 @@ const numericOption = (args: readonly string[], name: string): number | undefine
   return value;
 };
 
+const createProvider = async (
+  name: string,
+  cases: readonly EvalCase[],
+  args: readonly string[],
+): Promise<SystemOneProvider> => {
+  if (name === "replay") {
+    return new ReplaySystemOneProvider({
+      records: replayRecordsFromCases(cases),
+    });
+  }
+  if (name === "laya") {
+    const model = optionValue(args, "--model");
+    const language = optionValue(args, "--lang");
+    const minConfidence = numericOption(args, "--min-confidence");
+    return createLayaTsProvider({
+      ...(model ? { model } : {}),
+      ...(language ? { language } : {}),
+      ...(minConfidence === undefined ? {} : { minConfidence }),
+    });
+  }
+  throw new Error(`unsupported provider: ${name}`);
+};
+
+const loadFixture = async (
+  fixturePath: string,
+): Promise<{ cases: EvalCase[]; datasetId: string }> => {
+  const cases = parseEvalJsonl(await readFile(fixturePath, "utf8"));
+  return { cases, datasetId: basename(fixturePath) };
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
-  if (args[0] !== "eval") {
-    usage();
-  }
+  const command = args[0];
   const fixturePath = args[1] ?? usage();
-  const providerName = optionValue(args, "--provider") ?? "replay";
-  const cases = parseEvalJsonl(await readFile(fixturePath, "utf8"));
+  const loaded = await loadFixture(fixturePath);
+  const datasetId = optionValue(args, "--dataset") ?? loaded.datasetId;
 
-  const model = optionValue(args, "--model");
-  const language = optionValue(args, "--lang");
-  const minConfidence = numericOption(args, "--min-confidence");
+  if (command === "eval") {
+    const providerName = optionValue(args, "--provider") ?? "replay";
+    const provider = await createProvider(providerName, loaded.cases, args);
+    const run = await runEval(provider, loaded.cases, { datasetId });
+    const outPath = optionValue(args, "--out") ?? `evidence/eval/${run.runId}.json`;
+    await writeEvalEvidence(outPath, run);
 
-  const provider =
-    providerName === "replay"
-      ? new ReplaySystemOneProvider({ records: replayRecordsFromCases(cases) })
-      : providerName === "laya"
-        ? await createLayaTsProvider({
-            ...(model ? { model } : {}),
-            ...(language ? { language } : {}),
-            ...(minConfidence === undefined ? {} : { minConfidence }),
-          })
-        : (() => {
-            throw new Error(`unsupported provider: ${providerName}`);
-          })();
+    const accuracy = (run.metrics.accuracy * 100).toFixed(1);
+    console.log(
+      `provider=${run.providerId} dataset=${run.datasetId} cases=${run.metrics.cases} accuracy=${accuracy}% errors=${run.metrics.providerErrors}`,
+    );
+    console.log(`evidence=${outPath}`);
+    return;
+  }
 
-  const datasetId = optionValue(args, "--dataset") ?? basename(fixturePath);
-  const run = await runEval(provider, cases, { datasetId });
-  const outPath = optionValue(args, "--out") ?? `evidence/eval/${run.runId}.json`;
-  await writeEvalEvidence(outPath, run);
+  if (command === "compare") {
+    const providerNames = (optionValue(args, "--providers") ?? "replay,laya")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (providerNames.length < 2) {
+      throw new Error("--providers requires at least two comma-separated providers");
+    }
 
-  const accuracy = (run.metrics.accuracy * 100).toFixed(1);
-  console.log(
-    `provider=${run.providerId} dataset=${run.datasetId} cases=${run.metrics.cases} accuracy=${accuracy}% errors=${run.metrics.providerErrors}`,
-  );
-  console.log(`evidence=${outPath}`);
+    const providers: SystemOneProvider[] = [];
+    for (const name of providerNames) {
+      providers.push(await createProvider(name, loaded.cases, args));
+    }
+
+    const scoreAgreementTolerance = numericOption(args, "--score-tolerance");
+    const evidence = await runComparison(providers, loaded.cases, {
+      datasetId,
+      ...(scoreAgreementTolerance === undefined
+        ? {}
+        : { scoreAgreementTolerance }),
+    });
+    const outPath =
+      optionValue(args, "--out") ??
+      `evidence/compare/${evidence.comparisonId}.json`;
+    await writeComparisonEvidence(outPath, evidence);
+
+    for (const pair of evidence.pairs) {
+      console.log(
+        `pair=${pair.left}:${pair.right} comparable=${pair.comparableQuestions} agreement=${(pair.agreementRate * 100).toFixed(1)}% disagreements=${pair.disagreements} left_only_correct=${pair.leftOnlyCorrect} right_only_correct=${pair.rightOnlyCorrect}`,
+      );
+    }
+    console.log(`evidence=${outPath}`);
+    return;
+  }
+
+  usage();
 };
 
 main().catch((error: unknown) => {
