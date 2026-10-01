@@ -11,6 +11,14 @@
     "mso": "npm run build --silent && node dist/src/cli.js",
     "eval:smoke": "npm run mso -- eval fixtures/eval/smoke.jsonl --out evidence/eval/smoke.json"
   },
+  "peerDependencies": {
+    "laya-ts": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "laya-ts": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0"
