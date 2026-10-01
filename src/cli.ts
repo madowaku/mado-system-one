@@ -41,20 +41,18 @@ const main = async (): Promise<void> => {
   const providerName = optionValue(args, "--provider") ?? "replay";
   const cases = parseEvalJsonl(await readFile(fixturePath, "utf8"));
 
+  const model = optionValue(args, "--model");
+  const language = optionValue(args, "--lang");
+  const minConfidence = numericOption(args, "--min-confidence");
+
   const provider =
     providerName === "replay"
       ? new ReplaySystemOneProvider({ records: replayRecordsFromCases(cases) })
       : providerName === "laya"
         ? await createLayaTsProvider({
-            ...(optionValue(args, "--model")
-              ? { model: optionValue(args, "--model") }
-              : {}),
-            ...(optionValue(args, "--lang")
-              ? { language: optionValue(args, "--lang") }
-              : {}),
-            ...(numericOption(args, "--min-confidence") === undefined
-              ? {}
-              : { minConfidence: numericOption(args, "--min-confidence") }),
+            ...(model ? { model } : {}),
+            ...(language ? { language } : {}),
+            ...(minConfidence === undefined ? {} : { minConfidence }),
           })
         : (() => {
             throw new Error(`unsupported provider: ${providerName}`);
