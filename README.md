@@ -129,6 +129,34 @@ Important semantics:
 - Non-integer MADO score bounds are rejected by the adapter rather than silently distorted.
 - Laya remains experimental until MADO workload calibration and shadow evidence justify promotion.
 
+## Multi-provider comparison
+
+MSO-LAYA-M0.2 runs the same fixture through multiple providers and writes one comparison bundle.
+
+~~~bash
+npm run mso -- compare fixtures/eval/smoke.jsonl \
+  --providers replay,laya \
+  --out evidence/compare/replay-vs-laya.json
+~~~
+
+The comparison intentionally keeps **agreement** separate from **correctness**. For every provider pair it records:
+
+- comparable questions, agreements, disagreements, and agreement rate
+- both-correct / left-only-correct / right-only-correct / both-wrong counts
+- numeric answer deltas for `noul` and `score`
+- confidence deltas when both providers expose confidence
+- the full underlying eval runs in the same evidence bundle
+
+`score` agreement defaults to an absolute tolerance of `0.5` and can be changed with `--score-tolerance`.
+
+The runner is provider-array based rather than hard-coded to two engines, so a future command can be:
+
+~~~bash
+mso compare fixture.jsonl --providers replay,laya,jev
+~~~
+
+without changing the comparison schema.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -145,7 +173,8 @@ Important semantics:
 - **M0.9** Multimodal typed-decision spike
 - **MSO-LAYA-M0.0** Provider-neutral Eval Skeleton ✅
 - **MSO-LAYA-M0.1** Laya Adapter ✅
-- **MSO-LAYA-M0.2** Replay vs Laya Tri-Runner
+- **MSO-LAYA-M0.2** Replay vs Laya Tri-Runner ✅
+- **MSO-LAYA-M0.3** Disagreement Lab
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
