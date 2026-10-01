@@ -472,3 +472,30 @@ export class JsonlShadowEvidenceSink implements ShadowEvidenceSink {
     await this.#writeChain;
   }
 }
+
+
+export interface PartitionedShadowEvidenceOptions {
+  tracePath: string;
+  reviewQueuePath: string;
+}
+
+export class PartitionedShadowEvidenceSink implements ShadowEvidenceSink {
+  readonly #traceSink: JsonlShadowEvidenceSink;
+  readonly #reviewSink: JsonlShadowEvidenceSink;
+
+  constructor(options: PartitionedShadowEvidenceOptions) {
+    this.#traceSink = new JsonlShadowEvidenceSink(options.tracePath);
+    this.#reviewSink = new JsonlShadowEvidenceSink(options.reviewQueuePath);
+  }
+
+  async write(record: ShadowTrace): Promise<void> {
+    await this.#traceSink.write(record);
+    if (record.review.needed) {
+      await this.#reviewSink.write(record);
+    }
+  }
+
+  async flush(): Promise<void> {
+    await Promise.all([this.#traceSink.flush(), this.#reviewSink.flush()]);
+  }
+}
