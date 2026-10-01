@@ -107,7 +107,7 @@ test("comparison separates agreement from correctness", async () => {
   const verdict = asset?.questions.find((row) => row.questionId === "verdict");
   assert.equal(verdict?.pairs[0]?.agreement, false);
   assert.equal(verdict?.pairs[0]?.correctness, "left_only");
-  assert.equal(verdict?.pairs[0]?.confidenceDelta, 0.32);
+  assert.ok(Math.abs((verdict?.pairs[0]?.confidenceDelta ?? 0) - 0.32) < 1e-12);
 });
 
 test("three providers produce every pair without changing the runner shape", async () => {
