@@ -17,6 +17,17 @@ import {
   writeEvalEvidence,
   type EvalCase,
 } from "./eval/skeleton.js";
+import {
+  evaluatePromotionGate,
+  writePromotionGateEvidence,
+} from "./promotion/gate.js";
+import {
+  parseEvalRun,
+  parsePromotionControls,
+  parsePromotionPolicy,
+  parsePromotionReviewJsonl,
+  parseShadowTraceJsonl,
+} from "./promotion/io.js";
 import { createLayaTsProvider } from "./providers/laya.js";
 import { ReplaySystemOneProvider } from "./providers/replay.js";
 
@@ -26,6 +37,7 @@ const usage = (): never => {
       "  mso eval <fixture.jsonl> [--provider replay|laya] [--out <evidence.json>] [--dataset <id>]\n" +
       "  mso compare <fixture.jsonl> [--providers replay,laya] [--out <comparison.json>] [--dataset <id>]\n" +
       "  mso disagreements <fixture.jsonl> [--providers replay,laya] [--pair replay:laya] [--focus laya] [--out <summary.json>] [--queue <review.jsonl>]\n" +
+      "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -38,6 +50,12 @@ const optionValue = (args: readonly string[], name: string): string | undefined 
   return index >= 0 ? args[index + 1] : undefined;
 };
 
+const requiredOption = (args: readonly string[], name: string): string => {
+  const value = optionValue(args, name);
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+};
+
 const numericOption = (args: readonly string[], name: string): number | undefined => {
   const raw = optionValue(args, name);
   if (raw === undefined) return undefined;
@@ -47,6 +65,9 @@ const numericOption = (args: readonly string[], name: string): number | undefine
   }
   return value;
 };
+
+const readJson = async (path: string): Promise<unknown> =>
+  JSON.parse(await readFile(path, "utf8")) as unknown;
 
 const createProvider = async (
   name: string,
@@ -78,9 +99,57 @@ const loadFixture = async (
   return { cases, datasetId: basename(fixturePath) };
 };
 
+const runPromotionCheck = async (args: readonly string[]): Promise<void> => {
+  const policyPath = requiredOption(args, "--policy");
+  const evalPath = requiredOption(args, "--eval");
+  const shadowPath = optionValue(args, "--shadow");
+  const reviewsPath = optionValue(args, "--reviews");
+  const controlsPath = optionValue(args, "--controls");
+
+  const policy = parsePromotionPolicy(await readJson(policyPath));
+  const offlineRun = parseEvalRun(await readJson(evalPath));
+  const shadowTraces = shadowPath
+    ? parseShadowTraceJsonl(await readFile(shadowPath, "utf8"))
+    : [];
+  const reviews = reviewsPath
+    ? parsePromotionReviewJsonl(await readFile(reviewsPath, "utf8"))
+    : [];
+  const controls = controlsPath
+    ? parsePromotionControls(await readJson(controlsPath))
+    : undefined;
+
+  const evidence = evaluatePromotionGate({
+    policy,
+    offlineRun,
+    shadowTraces,
+    reviews,
+    ...(controls ? { controls } : {}),
+  });
+  const outPath =
+    optionValue(args, "--out") ??
+    `evidence/promotion/${evidence.gateId}.json`;
+  await writePromotionGateEvidence(outPath, evidence);
+
+  console.log(
+    `candidate=${evidence.candidateProviderId} surface=${evidence.decisionSurface} stage=${evidence.maxEligibleStage} action=${evidence.action}`,
+  );
+  for (const transition of evidence.transitions) {
+    console.log(
+      `transition=${transition.from}->${transition.to} status=${transition.status}`,
+    );
+  }
+  console.log(`evidence=${outPath}`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
+
+  if (command === "promotion-check") {
+    await runPromotionCheck(args);
+    return;
+  }
+
   const fixturePath = args[1] ?? usage();
   const loaded = await loadFixture(fixturePath);
   const datasetId = optionValue(args, "--dataset") ?? loaded.datasetId;

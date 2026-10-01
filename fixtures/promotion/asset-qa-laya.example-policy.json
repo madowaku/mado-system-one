@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "mso.promotion-policy.v0",
+  "policyId": "asset-qa-laya-example-v0",
+  "candidateProviderId": "laya",
+  "decisionSurface": "asset.qa",
+  "thresholds": {
+    "minOfflineCases": 100,
+    "minOfflineAccuracy": 0.9,
+    "maxOfflineProviderErrorRate": 0.01,
+    "minShadowTraces": 200,
+    "minComparableQuestions": 200,
+    "minShadowAgreementRate": 0.85,
+    "maxShadowProviderErrorRate": 0.01,
+    "highConfidenceThreshold": 0.85,
+    "maxHighConfidenceDisagreementRate": 0.03,
+    "minDisagreementReviewCoverage": 0.9,
+    "minReviewedDisagreements": 20,
+    "minReviewedShadowAccuracy": 0.85,
+    "maxP95LatencyRatio": 2
+  }
+}
