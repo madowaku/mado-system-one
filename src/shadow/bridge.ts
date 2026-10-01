@@ -361,8 +361,10 @@ export class ShadowBridge implements SystemOneProvider {
   readonly #sink: ShadowEvidenceSink;
   readonly #capture: ShadowCaptureMode;
   readonly #scoreAgreementTolerance: number;
-  readonly #redactRequest?: (request: DecisionRequest) => DecisionRequest;
-  readonly #onObserverError?: (error: unknown) => void;
+  readonly #redactRequest:
+    | ((request: DecisionRequest) => DecisionRequest)
+    | undefined;
+  readonly #onObserverError: ((error: unknown) => void) | undefined;
   readonly #inFlight = new Set<Promise<void>>();
 
   constructor(options: ShadowBridgeOptions) {
