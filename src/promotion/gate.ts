@@ -19,11 +19,14 @@ export interface PromotionThresholds {
   minComparableQuestions: number;
   minShadowAgreementRate: number;
   maxShadowProviderErrorRate: number;
+  highConfidenceThreshold: number;
+  maxHighConfidenceDisagreementRate: number;
   minDisagreementReviewCoverage: number;
   minReviewedDisagreements: number;
   minReviewedShadowAccuracy: number;
   maxP95ShadowWallLatencyMs?: number;
   maxP95ShadowLagMs?: number;
+  maxP95LatencyRatio?: number;
 }
 
 export interface PromotionPolicy {
@@ -84,11 +87,15 @@ export interface PromotionMetrics {
   comparableQuestions: number;
   shadowAgreementRate: number;
   shadowProviderErrorRate: number;
+  highConfidenceDisagreementQuestions: number;
+  highConfidenceDisagreementRate: number;
   disagreementQuestions: number;
   reviewedDisagreements: number;
   disagreementReviewCoverage: number;
   reviewedShadowAccuracy?: number;
+  p95IncumbentWallLatencyMs: number;
   p95ShadowWallLatencyMs: number;
+  p95LatencyRatio: number;
   p95ShadowLagMs: number;
 }
 
@@ -205,6 +212,8 @@ const validatePolicy = (policy: PromotionPolicy): void => {
     ["maxOfflineProviderErrorRate", t.maxOfflineProviderErrorRate],
     ["minShadowAgreementRate", t.minShadowAgreementRate],
     ["maxShadowProviderErrorRate", t.maxShadowProviderErrorRate],
+    ["highConfidenceThreshold", t.highConfidenceThreshold],
+    ["maxHighConfidenceDisagreementRate", t.maxHighConfidenceDisagreementRate],
     ["minDisagreementReviewCoverage", t.minDisagreementReviewCoverage],
     ["minReviewedShadowAccuracy", t.minReviewedShadowAccuracy],
   ] as const;
@@ -266,10 +275,17 @@ const calculateMetrics = (
   }
 
   const disagreementKeys = new Set<string>();
+  let highConfidenceDisagreementQuestions = 0;
   for (const trace of shadowTraces) {
     for (const question of trace.questions) {
       if (question.comparable && question.agreement === false) {
         disagreementKeys.add(reviewKey(trace.traceId, question.questionId));
+        if (
+          question.shadow.confidence !== undefined &&
+          question.shadow.confidence >= policy.thresholds.highConfidenceThreshold
+        ) {
+          highConfidenceDisagreementQuestions += 1;
+        }
       }
     }
   }
@@ -288,6 +304,19 @@ const calculateMetrics = (
       review.label === "shadow_correct" || review.label === "both_acceptable",
   ).length;
 
+  const p95IncumbentWallLatencyMs = pct(
+    shadowTraces
+      .filter((trace) => trace.incumbent.status === "ok")
+      .map((trace) => trace.incumbent.wallLatencyMs),
+    0.95,
+  );
+  const p95ShadowWallLatencyMs = pct(
+    shadowTraces
+      .filter((trace) => trace.shadow.status === "ok")
+      .map((trace) => trace.shadow.wallLatencyMs),
+    0.95,
+  );
+
   return {
     offlineCases: offlineRun.metrics.cases,
     offlineAccuracy: offlineRun.metrics.accuracy,
@@ -299,6 +328,11 @@ const calculateMetrics = (
     comparableQuestions,
     shadowAgreementRate: rate(agreements, comparableQuestions),
     shadowProviderErrorRate: rate(shadowErrors, shadowTraces.length),
+    highConfidenceDisagreementQuestions,
+    highConfidenceDisagreementRate: rate(
+      highConfidenceDisagreementQuestions,
+      comparableQuestions,
+    ),
     disagreementQuestions: disagreementKeys.size,
     reviewedDisagreements,
     disagreementReviewCoverage:
@@ -313,12 +347,12 @@ const calculateMetrics = (
             reviewedDisagreements,
           ),
         }),
-    p95ShadowWallLatencyMs: pct(
-      shadowTraces
-        .filter((trace) => trace.shadow.status === "ok")
-        .map((trace) => trace.shadow.wallLatencyMs),
-      0.95,
-    ),
+    p95IncumbentWallLatencyMs,
+    p95ShadowWallLatencyMs,
+    p95LatencyRatio:
+      p95IncumbentWallLatencyMs > 0
+        ? p95ShadowWallLatencyMs / p95IncumbentWallLatencyMs
+        : 0,
     p95ShadowLagMs: pct(
       shadowTraces.map((trace) => trace.shadowLagAfterIncumbentMs),
       0.95,
@@ -379,6 +413,12 @@ export const evaluatePromotionGate = (
       t.maxShadowProviderErrorRate,
       "candidate provider reliability stays within the policy ceiling",
     ),
+    passMax(
+      "high_confidence_disagreement_rate",
+      metrics.highConfidenceDisagreementRate,
+      t.maxHighConfidenceDisagreementRate,
+      "high-confidence live disagreements stay below the risk ceiling",
+    ),
     passMin(
       "disagreement_review_coverage",
       metrics.disagreementReviewCoverage,
@@ -404,6 +444,16 @@ export const evaluatePromotionGate = (
         metrics.p95ShadowLagMs,
         t.maxP95ShadowLagMs,
         "shadow completion lag stays operationally acceptable",
+      ),
+    );
+  }
+  if (t.maxP95LatencyRatio !== undefined) {
+    toCandidateChecks.push(
+      passMax(
+        "p95_latency_ratio",
+        metrics.p95LatencyRatio,
+        t.maxP95LatencyRatio,
+        "candidate p95 latency regression stays within the policy ratio",
       ),
     );
   }
