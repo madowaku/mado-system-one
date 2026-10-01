@@ -80,6 +80,30 @@ LOCALIZED
 
 Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversible actions remain outside learned decision authority.
 
+## Eval skeleton
+
+MSO-LAYA-M0.0 adds a provider-neutral evaluation spine. It intentionally does not depend on Laya yet.
+
+~~~
+JSONL fixture
+  ↓
+SystemOneProvider
+  ↓
+typed response validation
+  ↓
+correctness + latency + cost metrics
+  ↓
+evidence JSON
+~~~
+
+Run the deterministic smoke fixture with:
+
+~~~
+npm run eval:smoke
+~~~
+
+The replay provider exists to test the harness itself before live providers are attached. Provider failures are captured per case so one bad decision does not destroy the whole evaluation run.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -94,6 +118,8 @@ Every active deployment retains BYPASS / KILL / ROLLBACK. High-impact irreversib
 - **M0.7** Context Sieve eval pack
 - **M0.8** Structured Read experimental provider
 - **M0.9** Multimodal typed-decision spike
+- **MSO-LAYA-M0.0** Provider-neutral Eval Skeleton ✅
+- **MSO-LAYA-M0.1** Laya Adapter
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
