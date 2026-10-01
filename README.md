@@ -192,6 +192,52 @@ Priority is intentionally asymmetric around the selected `--focus` provider:
 
 `both_wrong` is routed to ground-truth review rather than training by default. Agreement is evidence, not authority.
 
+## Real Shadow Bridge
+
+MSO-LAYA-M0.4 runs an incumbent provider and a shadow provider on the same live `DecisionRequest`, while keeping the incumbent authoritative.
+
+~~~ts
+const sink = new PartitionedShadowEvidenceSink({
+  tracePath: "evidence/shadow/live.jsonl",
+  reviewQueuePath: "evidence/shadow/review.jsonl",
+});
+
+const provider = new ShadowBridge({
+  incumbent: currentProvider,
+  shadow: layaProvider,
+  sink,
+  capture: "minimal",
+});
+
+const response = await provider.decide(request);
+// response is always the incumbent response.
+// Laya cannot replace it, even if the incumbent fails.
+
+await provider.flush(); // shutdown/test boundary
+~~~
+
+Operational invariants:
+
+- the incumbent response is returned without waiting for shadow inference or evidence writes
+- shadow output never becomes execution authority
+- shadow provider failure does not fail the incumbent request
+- incumbent failure is never replaced by a successful shadow answer
+- every trace is explicitly marked `labelsKnown: false`
+- disagreements become `human_label_required`, not automatic training labels
+- provider failures become `provider_error_review`
+- `flush()` drains in-flight observations at shutdown or deterministic test boundaries
+
+Evidence capture defaults to `minimal`: trace id, pattern, question ids, and bounded identifiers only. State, questions, and free-form metadata are excluded by default. Use `capture: "full"` only with an appropriate `redactRequest` function when live context must enter the evidence trail.
+
+A partitioned sink writes:
+
+~~~text
+evidence/shadow/live.jsonl    # every shadow trace
+evidence/shadow/review.jsonl  # disagreements / provider failures only
+~~~
+
+This is intentionally different from offline eval. Live shadow traffic has no oracle label, so the bridge records agreement, confidence deltas, answer deltas, latency, and failures without pretending to know which provider is correct.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -210,7 +256,8 @@ Priority is intentionally asymmetric around the selected `--focus` provider:
 - **MSO-LAYA-M0.1** Laya Adapter ✅
 - **MSO-LAYA-M0.2** Replay vs Laya Tri-Runner ✅
 - **MSO-LAYA-M0.3** Disagreement Lab ✅
-- **MSO-LAYA-M0.4** Real Shadow Bridge
+- **MSO-LAYA-M0.4** Real Shadow Bridge ✅
+- **MSO-LAYA-M0.5** Promotion Gate
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
