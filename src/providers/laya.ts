@@ -226,12 +226,14 @@ const fromScore = (
     type: "score",
     expectedScore,
     ...(distribution ? { distribution } : {}),
+    confidence: probability(answer.answer_confidence, `${id}.answer_confidence`),
   };
 };
 
 const fromNoul = (answer: LayaNoulAnswer, id: string): TypedResult => ({
   type: "noul",
   probabilityYes: probability(answer.noul, `${id}.noul`),
+  confidence: probability(answer.answer_confidence, `${id}.answer_confidence`),
 });
 
 export const fromLayaAnswers = (

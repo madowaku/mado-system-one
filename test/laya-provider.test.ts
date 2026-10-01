@@ -87,10 +87,12 @@ test("answer translation uses answer_confidence and restores score offset", () =
     type: "score",
     expectedScore: 3.4,
     distribution: [0.1, 0.4, 0.5],
+    confidence: 0.5,
   });
   assert.deepEqual(results.sufficient, {
     type: "noul",
     probabilityYes: 0.91,
+    confidence: 0.91,
   });
 });
 

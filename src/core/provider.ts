@@ -74,6 +74,9 @@ const validateResult = (question: TypedQuestion, result: TypedResult): void => {
 
     case "noul":
       assertProbability(result.probabilityYes, "noul probabilityYes");
+      if (result.confidence !== undefined) {
+        assertProbability(result.confidence, "noul confidence");
+      }
       return;
 
     case "score":
@@ -88,6 +91,9 @@ const validateResult = (question: TypedQuestion, result: TypedResult): void => {
         throw new ProviderContractError(
           `score expectedScore must be within [${question.min}, ${question.max}]`,
         );
+      }
+      if (result.confidence !== undefined) {
+        assertProbability(result.confidence, "score confidence");
       }
       return;
   }

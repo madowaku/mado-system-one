@@ -46,8 +46,19 @@ const expected = (value: unknown, q: TypedQuestion, label: string): EvalExpected
 
 const result = (value: unknown, q: TypedQuestion, label: string): TypedResult => {
   if (!record(value) || value.type !== q.type) throw new EvalFixtureError(`${label}.type must match ${q.type}`);
-  if (q.type === "noul") return { type: "noul", probabilityYes: num(value.probabilityYes, `${label}.probabilityYes`) };
-  if (q.type === "score") return { type: "score", expectedScore: num(value.expectedScore, `${label}.expectedScore`) };
+  if (q.type === "noul") return {
+    type: "noul",
+    probabilityYes: num(value.probabilityYes, `${label}.probabilityYes`),
+    ...(typeof value.confidence === "number" ? { confidence: value.confidence } : {}),
+  };
+  if (q.type === "score") return {
+    type: "score",
+    expectedScore: num(value.expectedScore, `${label}.expectedScore`),
+    ...(Array.isArray(value.distribution)
+      ? { distribution: value.distribution.map((item, index) => num(item, `${label}.distribution[${index}]`)) }
+      : {}),
+    ...(typeof value.confidence === "number" ? { confidence: value.confidence } : {}),
+  };
   const selected = value.selected; if (selected !== null && typeof selected !== "string") throw new EvalFixtureError(`${label}.selected must be string|null`); if (!record(value.distribution)) throw new EvalFixtureError(`${label}.distribution must be object`);
   const distribution: Record<string, number> = {}; for (const [id, p] of Object.entries(value.distribution)) distribution[id] = num(p, `${label}.distribution.${id}`);
   return { type: "choice", selected, distribution, ...(typeof value.confidence === "number" ? { confidence: value.confidence } : {}) };

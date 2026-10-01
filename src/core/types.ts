@@ -160,12 +160,14 @@ export interface ChoiceResult {
 export interface NoulResult {
   type: "noul";
   probabilityYes: number;
+  confidence?: number;
 }
 
 export interface ScoreResult {
   type: "score";
   expectedScore: number;
   distribution?: readonly number[];
+  confidence?: number;
 }
 
 export type TypedResult = ChoiceResult | NoulResult | ScoreResult;
