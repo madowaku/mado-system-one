@@ -120,13 +120,14 @@ const snapshot = (
     };
   }
   const projected = answerOf(result);
+  const confidence = confidenceOf(result);
   return {
     providerId,
     status: "ok",
     correct: judgementCorrect(row, questionId),
     answer: projected.answer,
     ...(projected.rawValue === undefined ? {} : { rawValue: projected.rawValue }),
-    ...(confidenceOf(result) === undefined ? {} : { confidence: confidenceOf(result) }),
+    ...(confidence === undefined ? {} : { confidence }),
   };
 };
 
