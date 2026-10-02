@@ -352,6 +352,20 @@ Older canary evidence that lacks candidate confidence telemetry is insufficient 
 
 A drift event can ultimately return a surface to SHADOW, but M1.0 first removes candidate authority with HOLD so diagnosis can distinguish workload drift from checkpoint failure.
 
+When M1.1 classifies the cause as workload_drift, M1.2 applies these invariants:
+
+- the historical baseline remains immutable evidence,
+- a changed workload first becomes a reviewed rebaseline candidate rather than an accepted baseline,
+- distribution deltas are descriptive and are not confused with operational-health ceilings,
+- candidate sample coverage must satisfy explicit minimums,
+- candidate and incumbent provider error, fallback rate, and p95 latency remain bounded before recovery canary is allowed,
+- recovery restarts at canary_1,
+- acceptance requires a complete canary_1 -> canary_5 -> canary_25 advance-evidence chain,
+- all recovery policies must preserve checkpoint fingerprint, provider identities, decision surface, and lineage head identity,
+- the accepted canary_25 summary, not the initial workload sample, becomes the next drift baseline,
+- the new limited-active policy and drift policy are materialized only after reviewed acceptance,
+- materialization is not runtime activation and does not rewrite historical baseline artifacts.
+
 ## 16. Replay
 
 Stored traces support offline counterfactual evaluation.
@@ -523,7 +537,11 @@ For HOLD recovery, test at least these branches:
 - unknown diagnosis cannot reopen candidate authority,
 - an audit-only lineage mutation can be re-pinned when the same promoted artifact and rollback safety remain valid,
 - a changed lineage head or changed checkpoint fingerprint blocks same-checkpoint requalification,
-- blocked requalification does not emit a restart policy.
+- blocked requalification does not emit a restart policy,
+- workload rebaseline with insufficient sample coverage cannot start recovery canary,
+- operationally unhealthy candidate workload cannot become a baseline candidate,
+- rebaseline acceptance rejects missing canary stages,
+- a healthy three-stage recovery canary can materialize a new limited-active policy and drift baseline without activating either automatically.
 
 For canary rollout, the mandatory rollback drill injects a synthetic candidate failure and verifies:
 
