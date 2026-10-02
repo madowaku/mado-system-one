@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "mso.hold-recovery-case.v0",
+  "recoveryId": "asset-qa-v2-recovery-001",
+  "holdId": "hold-asset-qa-v2-active-drift-2026-10-02T12-00-00-000Z",
+  "classification": "provider_regression",
+  "diagnosisSummary": "Candidate runtime dependency regressed while checkpoint identity remained unchanged.",
+  "operatorReviewed": true,
+  "operatorApprovalRef": "ops-review:asset-qa-v2-recovery-001",
+  "diagnosisEvidenceRefs": [
+    "incident:asset-qa-provider-42"
+  ],
+  "repairSummary": "Provider runtime was repaired and the same checkpoint was replayed.",
+  "repairEvidenceRefs": [
+    "change:provider-runtime-42"
+  ],
+  "verificationEvidenceRefs": [
+    "replay:asset-qa-v2-post-repair"
+  ]
+}
