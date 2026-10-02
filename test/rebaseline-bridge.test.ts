@@ -447,6 +447,7 @@ test("operationally unhealthy new workload cannot become a baseline candidate", 
   const drift = driftPolicy(active);
   const unhealthy = candidateTraces(active.policyId);
   unhealthy[0] = trace(active.policyId, 1, { candidateError: true });
+  unhealthy[1] = trace(active.policyId, 2, { candidateError: true });
 
   const result = buildWorkloadRebaselineCandidate(
     registry,
