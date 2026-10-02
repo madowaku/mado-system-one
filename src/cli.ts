@@ -11,6 +11,14 @@ import {
   writeDisagreementLab,
 } from "./eval/disagreement.js";
 import {
+  buildFineTunePack,
+  writeFineTunePack,
+} from "./finetune/candidate.js";
+import {
+  parseDisagreementQueueJsonl,
+  parseFineTuneAnnotationsJsonl,
+} from "./finetune/io.js";
+import {
   parseEvalJsonl,
   replayRecordsFromCases,
   runEval,
@@ -38,6 +46,7 @@ const usage = (): never => {
       "  mso compare <fixture.jsonl> [--providers replay,laya] [--out <comparison.json>] [--dataset <id>]\n" +
       "  mso disagreements <fixture.jsonl> [--providers replay,laya] [--pair replay:laya] [--focus laya] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
+      "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -141,12 +150,42 @@ const runPromotionCheck = async (args: readonly string[]): Promise<void> => {
   console.log(`evidence=${outPath}`);
 };
 
+const runFineTunePack = async (args: readonly string[]): Promise<void> => {
+  const queuePath = requiredOption(args, "--queue");
+  const annotationsPath = requiredOption(args, "--annotations");
+  const outDir = requiredOption(args, "--out-dir");
+  const validationFraction = numericOption(args, "--validation-fraction");
+  const splitSeed = optionValue(args, "--split-seed");
+
+  const records = parseDisagreementQueueJsonl(
+    await readFile(queuePath, "utf8"),
+  );
+  const annotations = parseFineTuneAnnotationsJsonl(
+    await readFile(annotationsPath, "utf8"),
+  );
+  const pack = buildFineTunePack(records, annotations, {
+    ...(validationFraction === undefined ? {} : { validationFraction }),
+    ...(splitSeed ? { splitSeed } : {}),
+  });
+  await writeFineTunePack(outDir, pack);
+
+  console.log(
+    `pack=${pack.manifest.packId} ready_records=${pack.manifest.counts.trainingReadyRecords} held=${pack.manifest.counts.heldRecords} train_cases=${pack.manifest.counts.trainCases} validation_cases=${pack.manifest.counts.validationCases}`,
+  );
+  console.log(`out_dir=${outDir}`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
 
   if (command === "promotion-check") {
     await runPromotionCheck(args);
+    return;
+  }
+
+  if (command === "finetune-pack") {
+    await runFineTunePack(args);
     return;
   }
 

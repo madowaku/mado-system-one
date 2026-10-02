@@ -14,6 +14,8 @@ export * from "./eval/disagreement.js";
 export * from "./shadow/bridge.js";
 export * from "./promotion/gate.js";
 export * from "./promotion/io.js";
+export * from "./finetune/candidate.js";
+export * from "./finetune/io.js";
 
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";

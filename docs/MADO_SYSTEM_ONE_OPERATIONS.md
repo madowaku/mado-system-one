@@ -311,6 +311,16 @@ Prefer label sources in this order:
 
 Do not train a specialist blindly on old router predictions.
 
+For Laya fine-tune candidate packs:
+
+- a reviewed hard label and a soft training target are separate evidence,
+- hard labels must not be silently converted into one-hot targets,
+- soft-target provenance must identify the source run or verified outcome,
+- target argmax must agree with the reviewed label before training eligibility,
+- train/validation splitting is grouped by case identity to prevent state leakage,
+- validation evidence remains untouched by training and calibration,
+- a fine-tuned checkpoint re-enters evaluation as a new candidate and inherits no promotion status.
+
 ## 19. LOCALIZED stack
 
 Preferred mature stack:
