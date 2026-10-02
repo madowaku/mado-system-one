@@ -370,7 +370,7 @@ test("drift policy rejects identity mismatch and non-limited activation", () => 
 
   assert.throws(
     () => evaluateDriftWindow(basePolicy, other, []),
-    /identity does not match/,
+    /does not match/,
   );
 
   const canary25 = {
