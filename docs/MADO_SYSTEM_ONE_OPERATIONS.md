@@ -336,6 +336,18 @@ The authority switch records whether it was triggered as kill or auto_hold. A he
 
 Recovery from AUTO HOLD requires preserving traces, diagnosis, offline replay/re-evaluation as needed, and a new reviewed activation session.
 
+M1.1 formalizes the recovery junction:
+
+- provider_regression and calibration_drift may requalify the same checkpoint only after operator review, explicit approval evidence, repair evidence, verification evidence, and a passing post-repair drift replay,
+- workload_drift must route to a reviewed replacement baseline rather than treating the old baseline as still authoritative,
+- checkpoint_regression must route through a new checkpoint lineage rather than reopening the held artifact,
+- unknown diagnosis remains held,
+- the original activation session and AUTO HOLD are never cleared in place,
+- a passing same-checkpoint requalification creates a distinct canary_1 policy,
+- requalification is eligibility evidence only and never automatic runtime reactivation,
+- current lineage state is rechecked before issuing a restart policy: same promoted checkpoint fingerprint, current recorded head, and known-good rollback target,
+- the new restart policy is pinned to the current lineage event-chain hash.
+
 Older canary evidence that lacks candidate confidence telemetry is insufficient for a confidence-drift baseline. Do not synthesize missing confidence values.
 
 A drift event can ultimately return a surface to SHADOW, but M1.0 first removes candidate authority with HOLD so diagnosis can distinguish workload drift from checkpoint failure.
@@ -465,13 +477,14 @@ Reliability:
 ~~~
 1. KILL, AUTO HOLD, or BYPASS
 2. preserve logs
-3. restore known baseline
-4. identify affected traces
-5. classify failure
-6. reproduce offline
-7. fix code / provider / calibration
-8. return to SHADOW
-9. re-evaluate and promote again
+3. identify affected traces
+4. classify failure
+5. reproduce offline
+6. fix code / provider / calibration or route to rebaseline/new checkpoint
+7. run requalification gate
+8. if same-checkpoint recovery passes, start a new canary_1 session
+9. if checkpoint state changed, return through re-eval / promotion / lineage
+10. only use rollback when checkpoint-generation state actually needs to change
 
 When checkpoint rollback is involved:
 
@@ -500,6 +513,17 @@ Test:
 - human confirmation path.
 
 Operational safety should be tested as deliberately as model quality.
+
+For HOLD recovery, test at least these branches:
+
+- reviewed provider regression with passing replay creates a new canary_1 policy,
+- calibration drift without passing replay remains held,
+- workload drift cannot direct-resume and routes to rebaseline,
+- checkpoint regression cannot direct-resume and routes to a new checkpoint,
+- unknown diagnosis cannot reopen candidate authority,
+- an audit-only lineage mutation can be re-pinned when the same promoted artifact and rollback safety remain valid,
+- a changed lineage head or changed checkpoint fingerprint blocks same-checkpoint requalification,
+- blocked requalification does not emit a restart policy.
 
 For canary rollout, the mandatory rollback drill injects a synthetic candidate failure and verifies:
 
