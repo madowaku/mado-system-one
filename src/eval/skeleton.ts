@@ -29,10 +29,49 @@ const question = (value: unknown, label: string): TypedQuestion => {
   if (!record(value)) throw new EvalFixtureError(`${label} must be an object`);
   const type = str(value.type, `${label}.type`); const prompt = str(value.prompt, `${label}.prompt`);
   if (type === "noul") return { type, prompt };
-  if (type === "score") return { type, prompt, min: num(value.min, `${label}.min`), max: num(value.max, `${label}.max`) };
+  if (type === "score") {
+    let labels: Record<number, string> | undefined;
+    if (value.labels !== undefined) {
+      if (!record(value.labels)) {
+        throw new EvalFixtureError(`${label}.labels must be an object`);
+      }
+      labels = {};
+      for (const [key, rawLabel] of Object.entries(value.labels)) {
+        const numericKey = Number(key);
+        if (!Number.isFinite(numericKey)) {
+          throw new EvalFixtureError(`${label}.labels key must be numeric: ${key}`);
+        }
+        labels[numericKey] = str(rawLabel, `${label}.labels.${key}`);
+      }
+    }
+    return {
+      type,
+      prompt,
+      min: num(value.min, `${label}.min`),
+      max: num(value.max, `${label}.max`),
+      ...(labels ? { labels } : {}),
+    };
+  }
   if (type === "choice") {
-    if (!Array.isArray(value.options) || value.options.length === 0) throw new EvalFixtureError(`${label}.options must be non-empty`);
-    return { type, prompt, options: value.options.map((item, index) => { if (!record(item)) throw new EvalFixtureError(`${label}.options[${index}] must be an object`); return { id: str(item.id, `${label}.options[${index}].id`), label: str(item.label, `${label}.options[${index}].label`) }; }) };
+    if (!Array.isArray(value.options) || value.options.length === 0) {
+      throw new EvalFixtureError(`${label}.options must be non-empty`);
+    }
+    return {
+      type,
+      prompt,
+      options: value.options.map((item, index) => {
+        if (!record(item)) {
+          throw new EvalFixtureError(`${label}.options[${index}] must be an object`);
+        }
+        return {
+          id: str(item.id, `${label}.options[${index}].id`),
+          label: str(item.label, `${label}.options[${index}].label`),
+          ...(typeof item.description === "string"
+            ? { description: item.description }
+            : {}),
+        };
+      }),
+    };
   }
   throw new EvalFixtureError(`${label}.type unsupported: ${type}`);
 };
