@@ -64,7 +64,6 @@ import {
   parsePromotionGateEvidence,
   parseRollbackPlan,
   readCheckpointLineageRegistry,
-  writeCheckpointLineageRegistry,
   writeRollbackPlan,
 } from "./lineage/io.js";
 
@@ -80,6 +79,7 @@ const usage = (): never => {
       "  mso lineage-init --registry <registry.json> --registry-id <id> --surface <decision-surface>\n" +
       "  mso lineage-register --registry <registry.json> --checkpoint-id <id> --checkpoint-dir <onnx-dir> [--ref <name>] [--origin base|fine_tune|imported] [--parent <id>] [--known-good --known-good-ref <evidence-ref>] [--reeval <summary.json>] [--pack-ref <ref>]\n" +
       "  mso lineage-promote --registry <registry.json> --checkpoint-id <id> --gate <gate.json> --reeval <summary.json> --rollback-target <id>\n" +
+      "  mso lineage-set-rollback-safety --registry <registry.json> --checkpoint-id <id> --eligible <true|false> --evidence-ref <ref> --reason <text>\n" +
       "  mso rollback-plan --registry <registry.json> --to <checkpoint-id> --reason <text> --out <plan.json> [--from <checkpoint-id>]\n" +
       "  mso lineage-record-rollback --registry <registry.json> --plan <plan.json> --execution-ref <ref>\n" +
       "  mso lineage-show --registry <registry.json>\n" +
@@ -434,6 +434,46 @@ const runLineagePromote = async (args: readonly string[]): Promise<void> => {
   );
 };
 
+
+const booleanOption = (
+  args: readonly string[],
+  name: string,
+): boolean => {
+  const raw = requiredOption(args, name);
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error(`${name} must be true|false`);
+};
+
+const runLineageSetRollbackSafety = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const checkpointId = requiredOption(args, "--checkpoint-id");
+  const eligible = booleanOption(args, "--eligible");
+  const evidenceRef = requiredOption(args, "--evidence-ref");
+  const reason = requiredOption(args, "--reason");
+
+  const next = await mutateCheckpointLineageRegistry(
+    registryPath,
+    (registry) =>
+      appendLineageEvent(registry, {
+        type: "rollback_safety_set",
+        data: {
+          checkpointId,
+          eligible,
+          evidenceRef,
+          reason,
+        },
+      }),
+  );
+  const state = deriveLineageState(next);
+  const checkpoint = state.checkpoints[checkpointId];
+  console.log(
+    `checkpoint=${checkpointId} rollback_eligible=${checkpoint?.knownGood ?? false} evidence_ref=${checkpoint?.knownGoodEvidenceRef ?? "none"}`,
+  );
+};
+
 const runRollbackPlanCli = async (args: readonly string[]): Promise<void> => {
   const registryPath = requiredOption(args, "--registry");
   const outPath = requiredOption(args, "--out");
@@ -498,6 +538,11 @@ const main = async (): Promise<void> => {
 
   if (command === "lineage-promote") {
     await runLineagePromote(args);
+    return;
+  }
+
+  if (command === "lineage-set-rollback-safety") {
+    await runLineageSetRollbackSafety(args);
     return;
   }
 
