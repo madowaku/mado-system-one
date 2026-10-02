@@ -25,6 +25,7 @@ Verifier     = prove
 - docs/MADO_LAYA_CANARY_RUNBOOK.md — staged runtime authority, circuit-breaker fallback, stage evidence, and rollback drill
 - docs/MADO_LAYA_DRIFT_GUARD_RUNBOOK.md — rolling active-limited drift detection and incumbent-only AUTO HOLD
 - docs/MADO_LAYA_HOLD_RECOVERY_RUNBOOK.md — typed HOLD diagnosis, requalification evidence, and new-session restart
+- docs/MADO_LAYA_REBASELINE_RUNBOOK.md — workload-drift baseline candidate, recovery canary chain, and new drift baseline materialization
 
 ## v0.3 shape
 
@@ -603,6 +604,59 @@ oldSessionReusable = false
 
 Blocked results write requalification.json only. restart.policy.json exists only after the gate passes.
 
+## Rebaseline / Recovery Canary Evidence Bridge
+
+MSO-LAYA-M1.2 handles the M1.1 workload_drift branch without pretending the old workload is still authoritative.
+
+~~~text
+old accepted baseline
+      |
+changed workload sample
+      |
+reviewed rebaseline candidate
+      |
+canary_1 -> canary_5 -> canary_25
+      |
+reviewed acceptance
+      |
+new limited_active policy
+      |
+new M1.0 drift baseline
+~~~
+
+The initial candidate records old/new operational metrics and descriptive deltas, but never overwrites the historical baseline:
+
+~~~text
+oldBaselineReplaced = false
+automaticActivation = false
+~~~
+
+Build the candidate with rebaseline-plan. It requires workload_drift classification, operator-reviewed distribution evidence, adequate sample coverage, bounded provider/fallback error, bounded latency, the same promoted checkpoint fingerprint, and a known-good rollback target.
+
+A passing candidate emits recovery-canary.policy.json at canary_1 only.
+
+Acceptance is stricter. rebaseline-accept requires the complete recovery chain:
+
+~~~text
+canary_1  + PASS advance
+canary_5  + PASS advance
+canary_25 + PASS advance to limited_active
+~~~
+
+All policies must share checkpoint, provider, decision-surface, and lineage identities. Skipping a stage is rejected.
+
+The accepted canary_25 summary becomes the new M1.0 baseline. The candidate sample itself does not.
+
+On reviewed acceptance, M1.2 materializes:
+
+~~~text
+rebaseline.acceptance.json
+limited-active.policy.json
+drift.policy.json
+~~~
+
+The generated limited-active policy is still not started automatically. Historical baseline artifacts remain immutable evidence.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -629,7 +683,8 @@ Blocked results write requalification.json only. restart.policy.json exists only
 - **MSO-LAYA-M0.9** Canary Activation / Rollback Drill ✅
 - **MSO-LAYA-M1.0** Active-Limited Drift / Auto-Hold Guard ✅
 - **MSO-LAYA-M1.1** Hold Recovery / Requalification Gate ✅
-- **MSO-LAYA-M1.2** Rebaseline / Recovery Canary Evidence Bridge
+- **MSO-LAYA-M1.2** Rebaseline / Recovery Canary Evidence Bridge ✅
+- **MSO-LAYA-M1.3** Baseline Lineage / Distribution Epoch Registry
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
