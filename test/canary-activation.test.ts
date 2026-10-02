@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { DecisionRequest, DecisionResponse } from "../src/core/types.js";
 import {
+  assertCanaryPolicyAgainstRegistry,
   buildCanaryActivationPolicy,
   CanaryActivationProvider,
   CanaryKillSwitch,
@@ -378,10 +379,7 @@ test("policy is invalidated by any lineage mutation after planning", () => {
   );
 
   assert.throws(
-    async () => {
-      const module = await import("../src/activation/canary.js");
-      module.assertCanaryPolicyAgainstRegistry(changed, activation);
-    },
+    () => assertCanaryPolicyAgainstRegistry(changed, activation),
     /stale/,
   );
 });
