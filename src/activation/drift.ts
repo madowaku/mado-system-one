@@ -2,7 +2,6 @@ import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
   CanaryActivationPolicy,
-  CanaryEvidenceSink,
   CanaryKillSwitch,
   CanarySessionSummary,
   CanaryTrace,
@@ -623,25 +622,3 @@ export class JsonlDriftHoldEvidenceSink implements DriftHoldEvidenceSink {
   }
 }
 
-export class DriftGuardedCanaryEvidenceSink implements CanaryEvidenceSink {
-  readonly #guard: ActiveLimitedDriftGuard;
-  readonly #downstream: CanaryEvidenceSink;
-
-  constructor(
-    guard: ActiveLimitedDriftGuard,
-    downstream: CanaryEvidenceSink,
-  ) {
-    this.#guard = guard;
-    this.#downstream = downstream;
-  }
-
-  async write(record: CanaryTrace): Promise<void> {
-    this.#guard.observe(record);
-    await this.#downstream.write(record);
-  }
-
-  async flush(): Promise<void> {
-    await this.#guard.flush();
-    if (this.#downstream.flush) await this.#downstream.flush();
-  }
-}
