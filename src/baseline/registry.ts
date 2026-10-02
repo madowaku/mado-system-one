@@ -125,9 +125,9 @@ const rate = (value: number, label: string): number => {
   return value;
 };
 
-const positive = (value: number, label: string): number => {
+const nonNegative = (value: number, label: string): number => {
   finite(value, label);
-  if (value <= 0) throw new Error(`${label} must be positive`);
+  if (value < 0) throw new Error(`${label} must be non-negative`);
   return value;
 };
 
@@ -156,7 +156,7 @@ const validateMetrics = (
   rate(metrics.incumbentErrorRate, `${label}.incumbentErrorRate`);
   rate(metrics.fallbackRate, `${label}.fallbackRate`);
   rate(metrics.disagreementRate, `${label}.disagreementRate`);
-  positive(metrics.p95LatencyRatio, `${label}.p95LatencyRatio`);
+  nonNegative(metrics.p95LatencyRatio, `${label}.p95LatencyRatio`);
 };
 
 const canonicalize = (value: unknown): unknown => {
