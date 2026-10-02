@@ -366,6 +366,34 @@ When M1.1 classifies the cause as workload_drift, M1.2 applies these invariants:
 - the new limited-active policy and drift policy are materialized only after reviewed acceptance,
 - materialization is not runtime activation and does not rewrite historical baseline artifacts.
 
+M1.3 records accepted workload baselines in a separate distribution-epoch lineage.
+
+Operational invariants:
+
+- checkpoint lineage and baseline lineage are different ledgers,
+- the checkpoint lineage head answers which artifact generation is current,
+- the baseline lineage head answers which workload distribution is currently accepted,
+- a new workload epoch supersedes the previous epoch without deleting or rewriting it,
+- a new checkpoint generation does not require a new workload epoch when the accepted distribution is unchanged,
+- a new workload epoch does not require a new checkpoint when the same artifact remains valid,
+- every checkpoint-to-epoch pairing is recorded as an explicit binding,
+- each binding carries checkpoint fingerprint, activation policy, checkpoint-specific drift policy, and both activation-time and recorded checkpoint-lineage hashes,
+- an epoch stores the source drift policy that established the epoch, while later checkpoint bindings may use different drift policy ids with the same baseline metrics,
+- a new checkpoint binding must numerically match the current epoch baseline,
+- M1.2 rebaseline acceptance can create a new epoch only when its accepted metrics match the generated drift baseline,
+- baseline lineage is hash chained, atomic on write, writer locked, and runtimeAuthorityManaged=false,
+- runtime decisions should be interpreted against the pair: current checkpoint generation × current workload epoch.
+
+Historical evidence should therefore be read as:
+
+~~~text
+decision evidence
+  + checkpoint generation
+  + workload epoch
+~~~
+
+rather than checkpoint identity alone.
+
 ## 16. Replay
 
 Stored traces support offline counterfactual evaluation.
@@ -541,7 +569,12 @@ For HOLD recovery, test at least these branches:
 - workload rebaseline with insufficient sample coverage cannot start recovery canary,
 - operationally unhealthy candidate workload cannot become a baseline candidate,
 - rebaseline acceptance rejects missing canary stages,
-- a healthy three-stage recovery canary can materialize a new limited-active policy and drift baseline without activating either automatically.
+- a healthy three-stage recovery canary can materialize a new limited-active policy and drift baseline without activating either automatically,
+- baseline epoch history detects tampering through the event hash chain,
+- accepted rebaseline evidence creates a child epoch and supersedes the previous epoch without deleting it,
+- checkpoint generation can change while current workload epoch remains unchanged,
+- binding a checkpoint with a drift baseline from another epoch is rejected,
+- blocked or mismatched rebaseline acceptance cannot advance distribution epoch lineage.
 
 For canary rollout, the mandatory rollback drill injects a synthetic candidate failure and verifies:
 
