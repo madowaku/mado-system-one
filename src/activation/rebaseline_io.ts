@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type {
+  WorkloadRebaselineAcceptanceEvidence,
   WorkloadRebaselineAcceptanceReview,
   WorkloadRebaselineAcceptanceResult,
   WorkloadRebaselineCandidateEvidence,
@@ -92,6 +93,45 @@ export const parseWorkloadRebaselineAcceptanceReview = (
   return review;
 };
 
+export const parseWorkloadRebaselineAcceptanceEvidence = (
+  value: unknown,
+): WorkloadRebaselineAcceptanceEvidence => {
+  if (
+    !record(value) ||
+    value.schemaVersion !== "mso.rebaseline-acceptance.v0"
+  ) {
+    throw new Error(
+      "rebaseline acceptance evidence must use schemaVersion mso.rebaseline-acceptance.v0",
+    );
+  }
+  if (
+    value.status !== "pass" &&
+    value.status !== "blocked"
+  ) {
+    throw new Error("rebaseline acceptance evidence has unsupported status");
+  }
+  if (
+    value.action !== "eligible_for_limited_active" &&
+    value.action !== "hold_remains"
+  ) {
+    throw new Error("rebaseline acceptance evidence has unsupported action");
+  }
+  if (
+    value.automaticActivation !== false ||
+    value.oldBaselineReplaced !== false
+  ) {
+    throw new Error(
+      "rebaseline acceptance evidence must remain non-activating and preserve historical baseline",
+    );
+  }
+  if (!record(value.acceptedBaseline) || !record(value.review)) {
+    throw new Error(
+      "rebaseline acceptance evidence must include acceptedBaseline and review",
+    );
+  }
+  return value as unknown as WorkloadRebaselineAcceptanceEvidence;
+};
+
 export const parseWorkloadRebaselineCandidateEvidence = (
   value: unknown,
 ): WorkloadRebaselineCandidateEvidence => {
@@ -124,6 +164,13 @@ export const readWorkloadRebaselineAcceptanceReview = async (
   path: string,
 ): Promise<WorkloadRebaselineAcceptanceReview> =>
   parseWorkloadRebaselineAcceptanceReview(
+    JSON.parse(await readFile(path, "utf8")) as unknown,
+  );
+
+export const readWorkloadRebaselineAcceptanceEvidence = async (
+  path: string,
+): Promise<WorkloadRebaselineAcceptanceEvidence> =>
+  parseWorkloadRebaselineAcceptanceEvidence(
     JSON.parse(await readFile(path, "utf8")) as unknown,
   );
 
