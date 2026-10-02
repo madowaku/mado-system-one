@@ -28,6 +28,7 @@ const baseRecord = (
   datasetId: "fixture",
   caseId: overrides.caseId,
   taskFamily: overrides.taskFamily ?? "asset.qa",
+  pattern: overrides.pattern ?? "gate",
   questionId: overrides.questionId,
   questionType: overrides.questionType,
   state: overrides.state ?? `state for ${overrides.caseId}`,
@@ -231,6 +232,15 @@ test("candidate compiler emits Laya {state,questions,gold} soft-target cases", (
   assert.deepEqual(caseA.gold.sufficient, {
     label: "true",
     probabilities: { false: 0.1, true: 0.9 },
+  });
+  assert.equal(caseA._mado.evaluation.pattern, "gate");
+  assert.deepEqual(caseA._mado.evaluation.expected.verdict, {
+    type: "choice",
+    selected: "accept",
+  });
+  assert.deepEqual(caseA._mado.evaluation.expected.sufficient, {
+    type: "noul",
+    yes: true,
   });
 
   const caseC = all.find((item) => item._mado.caseId === "case-c");
