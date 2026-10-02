@@ -136,6 +136,7 @@ export interface CandidateReevalEvidence {
     baseEval: "base.eval.json";
     candidateEval: "candidate.eval.json";
     incumbentEval?: "incumbent.eval.json";
+    validationFixture: "validation.eval.jsonl";
     regressions: "regressions.jsonl";
   };
   promotionInput: {
@@ -149,6 +150,7 @@ export interface CandidateReevalResult {
   baseRun: EvalRun;
   candidateRun: EvalRun;
   incumbentRun?: EvalRun;
+  validationCases: readonly EvalCase[];
   rows: readonly ReevalQuestionRow[];
   regressions: readonly ReevalQuestionRow[];
 }
@@ -581,6 +583,7 @@ export const runCandidateReeval = async (
       baseEval: "base.eval.json",
       candidateEval: "candidate.eval.json",
       ...(options.incumbentRun ? { incumbentEval: "incumbent.eval.json" } : {}),
+      validationFixture: "validation.eval.jsonl",
       regressions: "regressions.jsonl",
     },
     promotionInput: {
@@ -595,6 +598,7 @@ export const runCandidateReeval = async (
     baseRun,
     candidateRun,
     ...(options.incumbentRun ? { incumbentRun: options.incumbentRun } : {}),
+    validationCases: cases,
     rows,
     regressions,
   };
@@ -602,6 +606,21 @@ export const runCandidateReeval = async (
 
 const jsonl = (rows: readonly unknown[]): string =>
   rows.length === 0 ? "" : `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
+
+
+const evalCaseJsonl = (cases: readonly EvalCase[]): string =>
+  jsonl(
+    cases.map((item) => ({
+      caseId: item.caseId,
+      taskFamily: item.taskFamily,
+      pattern: item.pattern,
+      state: item.state,
+      questions: item.questions,
+      expected: item.expected,
+      ...(item.tags ? { tags: item.tags } : {}),
+      ...(item.language ? { language: item.language } : {}),
+    })),
+  );
 
 export const writeCandidateReevalArtifacts = async (
   outDir: string,
@@ -622,6 +641,11 @@ export const writeCandidateReevalArtifacts = async (
     writeFile(
       join(outDir, "candidate.eval.json"),
       `${JSON.stringify(result.candidateRun, null, 2)}\n`,
+      "utf8",
+    ),
+    writeFile(
+      join(outDir, "validation.eval.jsonl"),
+      evalCaseJsonl(result.validationCases),
       "utf8",
     ),
     writeFile(
