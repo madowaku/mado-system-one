@@ -59,6 +59,8 @@ Use evidence from an accepted M0.9 canary stage for the same:
 
 The recommended source is the accepted canary_25 stage immediately before limited_active.
 
+Canary traces captured before M1.0 may not include per-question candidate confidence telemetry. If the baseline has no candidate confidence samples, drift-plan stops instead of inventing confidence values. Capture a compatible canary baseline first.
+
 Create the limited-active activation policy first, then build the drift policy:
 
 ~~~bash
