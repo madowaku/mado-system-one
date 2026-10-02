@@ -101,7 +101,9 @@ const drillRequest = (
     decisionSurface,
     canaryEligible: true,
     drill: true,
-    impact: "synthetic_reversible",
+    reversible: true,
+    impactClass: "low",
+    riskTags: [],
   },
 });
 
