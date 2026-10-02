@@ -20,6 +20,9 @@ export * from "./reeval/checkpoint.js";
 export * from "./reeval/candidate.js";
 export * from "./lineage/registry.js";
 export * from "./lineage/io.js";
+export * from "./activation/canary.js";
+export * from "./activation/io.js";
+export * from "./activation/drill.js";
 
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";
