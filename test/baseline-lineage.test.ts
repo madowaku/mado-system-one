@@ -569,7 +569,7 @@ test("event append rejects duplicate epoch registration", () => {
       distributionSummary: "Initial.",
       baseline: metrics,
       sourceBaselinePolicyId: "canary-25",
-      driftPolicyId: "drift-1",
+      sourceDriftPolicyId: "drift-1",
       sourceEvidenceRefs: ["seed:1"],
     },
   });
@@ -585,7 +585,7 @@ test("event append rejects duplicate epoch registration", () => {
           distributionSummary: "Duplicate.",
           baseline: metrics,
           sourceBaselinePolicyId: "canary-25-b",
-          driftPolicyId: "drift-2",
+          sourceDriftPolicyId: "drift-2",
           sourceEvidenceRefs: ["seed:2"],
           rebaselineId: "rebaseline-2",
         },
