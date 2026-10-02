@@ -44,7 +44,9 @@ export type HeldReason =
   | "missing_annotation"
   | "annotation_excluded"
   | "missing_reviewed_label"
+  | "missing_review_provenance"
   | "missing_soft_target"
+  | "missing_soft_target_provenance"
   | "soft_target_type_mismatch"
   | "soft_target_argmax_mismatch";
 
@@ -327,6 +329,15 @@ const toReady = (
   if (annotation.reviewedLabel === undefined) {
     return { held: hold(record, "missing_reviewed_label") };
   }
+  if (!annotation.labelSource || !annotation.reviewedAt) {
+    return { held: hold(record, "missing_review_provenance") };
+  }
+  if (!annotation.softTarget) {
+    return { held: hold(record, "missing_soft_target") };
+  }
+  if (!annotation.softTarget.sourceRef) {
+    return { held: hold(record, "missing_soft_target_provenance") };
+  }
 
   const built = buildGold(record, annotation);
   if (!built.gold || !built.source) {
@@ -483,7 +494,9 @@ export const buildFineTunePack = (
     missing_annotation: 0,
     annotation_excluded: 0,
     missing_reviewed_label: 0,
+    missing_review_provenance: 0,
     missing_soft_target: 0,
+    missing_soft_target_provenance: 0,
     soft_target_type_mismatch: 0,
     soft_target_argmax_mismatch: 0,
   } satisfies Record<HeldReason, number>;
