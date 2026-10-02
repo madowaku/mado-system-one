@@ -58,6 +58,7 @@ import {
   recordRollback,
 } from "./lineage/registry.js";
 import {
+  createCheckpointLineageRegistryFile,
   mutateCheckpointLineageRegistry,
   parseCandidateReevalEvidence,
   parsePromotionGateEvidence,
@@ -77,7 +78,7 @@ const usage = (): never => {
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
       "  mso candidate-reeval --validation <validation.jsonl> --base-checkpoint <onnx-dir> --candidate-checkpoint <onnx-dir> --out-dir <dir> [--model english|multilingual|typed-decisions] [--incumbent-eval <eval.json>]\n" +
       "  mso lineage-init --registry <registry.json> --registry-id <id> --surface <decision-surface>\n" +
-      "  mso lineage-register --registry <registry.json> --checkpoint-id <id> --checkpoint-dir <onnx-dir> [--ref <name>] [--origin base|fine_tune|imported] [--parent <id>] [--known-good] [--reeval <summary.json>] [--pack-ref <ref>]\n" +
+      "  mso lineage-register --registry <registry.json> --checkpoint-id <id> --checkpoint-dir <onnx-dir> [--ref <name>] [--origin base|fine_tune|imported] [--parent <id>] [--known-good --known-good-ref <evidence-ref>] [--reeval <summary.json>] [--pack-ref <ref>]\n" +
       "  mso lineage-promote --registry <registry.json> --checkpoint-id <id> --gate <gate.json> --reeval <summary.json> --rollback-target <id>\n" +
       "  mso rollback-plan --registry <registry.json> --to <checkpoint-id> --reason <text> --out <plan.json> [--from <checkpoint-id>]\n" +
       "  mso lineage-record-rollback --registry <registry.json> --plan <plan.json> --execution-ref <ref>\n" +
@@ -314,7 +315,7 @@ const runLineageInit = async (args: readonly string[]): Promise<void> => {
     requiredOption(args, "--registry-id"),
     requiredOption(args, "--surface"),
   );
-  await writeCheckpointLineageRegistry(registryPath, registry);
+  await createCheckpointLineageRegistryFile(registryPath, registry);
   console.log(
     `registry=${registry.registryId} surface=${registry.decisionSurface} events=0`,
   );
@@ -331,6 +332,10 @@ const runLineageRegister = async (args: readonly string[]): Promise<void> => {
   const fineTunePackRef = optionValue(args, "--pack-ref");
   const reevalPath = optionValue(args, "--reeval");
   const knownGood = flag(args, "--known-good");
+  const knownGoodEvidenceRef = optionValue(args, "--known-good-ref");
+  if (knownGood && !knownGoodEvidenceRef) {
+    throw new Error("--known-good requires --known-good-ref");
+  }
   const checkpoint = await fingerprintLayaOnnxCheckpoint(
     checkpointDir,
     checkpointRef,
@@ -376,6 +381,7 @@ const runLineageRegister = async (args: readonly string[]): Promise<void> => {
           checkpoint,
           origin,
           knownGood,
+          ...(knownGoodEvidenceRef ? { knownGoodEvidenceRef } : {}),
           ...(parentCheckpointId ? { parentCheckpointId } : {}),
           ...(fineTunePackRef ? { fineTunePackRef } : {}),
           ...(reevalPath ? { reevalEvidenceRef: reevalPath } : {}),
@@ -432,14 +438,13 @@ const runRollbackPlanCli = async (args: readonly string[]): Promise<void> => {
   const registryPath = requiredOption(args, "--registry");
   const outPath = requiredOption(args, "--out");
   const registry = await readCheckpointLineageRegistry(registryPath);
+  const fromCheckpointId = optionValue(args, "--from");
   const plan = planRollback(
     registry,
     requiredOption(args, "--to"),
     {
       reason: requiredOption(args, "--reason"),
-      ...(optionValue(args, "--from")
-        ? { fromCheckpointId: optionValue(args, "--from") }
-        : {}),
+      ...(fromCheckpointId ? { fromCheckpointId } : {}),
     },
   );
   await writeRollbackPlan(outPath, plan);
