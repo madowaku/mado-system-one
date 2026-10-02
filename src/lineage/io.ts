@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { PromotionGateEvidence } from "../promotion/gate.js";
 import type { CandidateReevalEvidence } from "../reeval/candidate.js";
@@ -124,4 +124,35 @@ export const writeRollbackPlan = async (
 ): Promise<void> => {
   parseRollbackPlan(plan);
   await writeJsonAtomic(path, plan);
+};
+
+
+export const mutateCheckpointLineageRegistry = async (
+  path: string,
+  mutate: (
+    registry: CheckpointLineageRegistry,
+  ) => CheckpointLineageRegistry | Promise<CheckpointLineageRegistry>,
+): Promise<CheckpointLineageRegistry> => {
+  const lockPath = `${path}.lock`;
+  await mkdir(dirname(path), { recursive: true });
+  let lock;
+  try {
+    lock = await open(lockPath, "wx");
+  } catch (error) {
+    throw new Error(
+      `checkpoint lineage registry is locked by another writer: ${lockPath}`,
+      { cause: error },
+    );
+  }
+
+  try {
+    const current = await readCheckpointLineageRegistry(path);
+    const next = await mutate(current);
+    verifyLineageRegistry(next);
+    await writeCheckpointLineageRegistry(path, next);
+    return next;
+  } finally {
+    await lock.close();
+    await unlink(lockPath).catch(() => undefined);
+  }
 };
