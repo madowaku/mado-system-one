@@ -1006,7 +1006,9 @@ export const summarizeCanaryTraces = (
 
 export interface CanaryAdvanceThresholds {
   minCandidateSelected: number;
+  minComparableQuestions: number;
   maxCandidateErrorRate: number;
+  maxIncumbentErrorRate: number;
   maxFallbackRate: number;
   maxDisagreementRate: number;
   maxP95LatencyRatio?: number;
@@ -1039,14 +1041,17 @@ export const evaluateCanaryAdvance = (
   summary: CanarySessionSummary,
   thresholds: CanaryAdvanceThresholds,
 ): CanaryAdvanceEvidence => {
-  if (
-    !Number.isInteger(thresholds.minCandidateSelected) ||
-    thresholds.minCandidateSelected < 1
-  ) {
-    throw new Error("minCandidateSelected must be a positive integer");
+  for (const [label, value] of [
+    ["minCandidateSelected", thresholds.minCandidateSelected],
+    ["minComparableQuestions", thresholds.minComparableQuestions],
+  ] as const) {
+    if (!Number.isInteger(value) || value < 1) {
+      throw new Error(`${label} must be a positive integer`);
+    }
   }
   for (const [label, value] of [
     ["maxCandidateErrorRate", thresholds.maxCandidateErrorRate],
+    ["maxIncumbentErrorRate", thresholds.maxIncumbentErrorRate],
     ["maxFallbackRate", thresholds.maxFallbackRate],
     ["maxDisagreementRate", thresholds.maxDisagreementRate],
   ] as const) {
@@ -1059,6 +1064,8 @@ export const evaluateCanaryAdvance = (
     summary.comparableQuestions === 0
       ? 0
       : summary.disagreements / summary.comparableQuestions;
+  const incumbentErrorRate =
+    summary.traces === 0 ? 0 : summary.incumbentErrors / summary.traces;
   const checks: CanaryAdvanceCheck[] = [
     {
       id: "candidate_selected",
@@ -1071,6 +1078,16 @@ export const evaluateCanaryAdvance = (
       detail: "enough candidate-authority requests have been observed",
     },
     {
+      id: "comparable_questions",
+      status:
+        summary.comparableQuestions >= thresholds.minComparableQuestions
+          ? "pass"
+          : "blocked",
+      actual: summary.comparableQuestions,
+      required: thresholds.minComparableQuestions,
+      detail: "enough incumbent/candidate question comparisons are available",
+    },
+    {
       id: "candidate_error_rate",
       status:
         summary.candidateErrorRate <= thresholds.maxCandidateErrorRate
@@ -1079,6 +1096,16 @@ export const evaluateCanaryAdvance = (
       actual: summary.candidateErrorRate,
       required: thresholds.maxCandidateErrorRate,
       detail: "candidate provider errors stay below the stage ceiling",
+    },
+    {
+      id: "incumbent_error_rate",
+      status:
+        incumbentErrorRate <= thresholds.maxIncumbentErrorRate
+          ? "pass"
+          : "fail",
+      actual: incumbentErrorRate,
+      required: thresholds.maxIncumbentErrorRate,
+      detail: "fallback incumbent remains operationally reliable",
     },
     {
       id: "fallback_rate",
@@ -1096,6 +1123,13 @@ export const evaluateCanaryAdvance = (
       required: thresholds.maxDisagreementRate,
       detail:
         "incumbent disagreement is a stability signal, not a correctness label",
+    },
+    {
+      id: "kill_switch_trips",
+      status: summary.killTrips === 0 ? "pass" : "fail",
+      actual: summary.killTrips,
+      required: 0,
+      detail: "a stage cannot advance after any kill-switch trip",
     },
   ];
 
