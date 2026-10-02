@@ -1,8 +1,5 @@
 import type { CanaryActivationPolicy } from "./canary.js";
-import {
-  assertCanaryPolicyAgainstRegistry,
-  buildCanaryActivationPolicy,
-} from "./canary.js";
+import { buildCanaryActivationPolicy } from "./canary.js";
 import type {
   ActiveLimitedDriftPolicy,
   DriftHoldEvent,
@@ -10,6 +7,7 @@ import type {
 } from "./drift.js";
 import { assertDriftPolicyAgainstActivation } from "./drift.js";
 import type { CheckpointLineageRegistry } from "../lineage/registry.js";
+import { deriveLineageState } from "../lineage/registry.js";
 
 export type HoldDiagnosisClassification =
   | "provider_regression"
@@ -337,7 +335,31 @@ export const evaluateHoldRequalification = (
     };
   }
 
-  assertCanaryPolicyAgainstRegistry(registry, activationPolicy);
+  const lineage = deriveLineageState(registry);
+  if (lineage.recordedHeadCheckpointId !== hold.candidateCheckpointId) {
+    throw new Error(
+      "held checkpoint is no longer the current lineage head",
+    );
+  }
+  const currentCheckpoint = lineage.checkpoints[hold.candidateCheckpointId];
+  if (
+    !currentCheckpoint ||
+    currentCheckpoint.lifecycle !== "promoted" ||
+    currentCheckpoint.checkpoint.fingerprint !== hold.candidateFingerprint
+  ) {
+    throw new Error(
+      "held checkpoint is no longer the same promoted lineage artifact",
+    );
+  }
+  if (
+    !currentCheckpoint.latestRollbackTargetId ||
+    !lineage.checkpoints[currentCheckpoint.latestRollbackTargetId]?.knownGood
+  ) {
+    throw new Error(
+      "held checkpoint no longer has a known-good rollback target",
+    );
+  }
+
   const restartPolicy = buildCanaryActivationPolicy(registry, {
     policyId: options.newActivationPolicyId,
     candidateProviderId: activationPolicy.candidateProviderId,
