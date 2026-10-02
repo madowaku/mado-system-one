@@ -20,6 +20,7 @@ Verifier     = prove
 - docs/MADO_SYSTEM_ONE_CONTEXT_PLANE_SPEC.md — query-aware context compilation and reversible SIEVE
 - docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
 - docs/MADO_LAYA_FINETUNE_RUNBOOK.md — reviewed disagreement → soft-target candidate pack → held-out validation loop
+- docs/MADO_LAYA_REEVAL_RUNBOOK.md — checkpoint export → hold-out re-eval → regression slices → Promotion Gate re-entry
 
 ## v0.3 shape
 
@@ -312,6 +313,50 @@ Splitting is deterministic, grouped by `caseId`, and stratified by task family. 
 
 The current Laya trainer owns a separate calibration slice inside the training set. MADO therefore keeps validation fully untouched for post-training evaluation. Fine-tuning creates a new candidate checkpoint; it does not inherit the previous checkpoint's promotion status.
 
+## Candidate Re-eval Loop
+
+MSO-LAYA-M0.7 evaluates a fine-tuned candidate against its base checkpoint on the untouched M0.6 validation split.
+
+The Python fine-tune output must first be materialized to the ONNX form consumed by `laya-ts`:
+
+~~~bash
+python laya-ts/scripts/export_onnx.py \
+  --model-dir <candidate-pytorch-checkpoint> \
+  --out-dir <candidate-onnx-checkpoint>
+~~~
+
+Then run:
+
+~~~bash
+npm run mso -- candidate-reeval \
+  --validation evidence/finetune/<pack>/validation.jsonl \
+  --base-checkpoint <base-onnx-checkpoint> \
+  --candidate-checkpoint <candidate-onnx-checkpoint> \
+  --model english \
+  --out-dir evidence/reeval/<candidate>
+~~~
+
+M0.7 restores the original MADO evaluation contract from `_mado.evaluation`, fingerprints both ONNX checkpoints with SHA-256, and runs the same labeled holdout through both providers.
+
+The output bundle contains:
+
+~~~text
+summary.json
+validation.eval.jsonl
+base.eval.json
+candidate.eval.json
+incumbent.eval.json       # optional
+regressions.jsonl
+~~~
+
+The summary reports aggregate accuracy/case-accuracy/error/latency deltas plus confidence coverage, Brier score, 10-bin ECE, and regression slices across task family, question type, language, and tags.
+
+Aggregate improvement does not erase local regression. `regressions.jsonl` records questions where the base was correct and the candidate became wrong or unavailable.
+
+`candidate.eval.json` is the labeled offline artifact intended to re-enter MSO-LAYA-M0.5 Promotion Gate. A fine-tuned checkpoint inherits no previous promotion status.
+
+M0.6 packs created before this milestone do not contain the re-evaluation metadata. Regenerate the fine-tune pack before using M0.7.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -333,7 +378,8 @@ The current Laya trainer owns a separate calibration slice inside the training s
 - **MSO-LAYA-M0.4** Real Shadow Bridge ✅
 - **MSO-LAYA-M0.5** Promotion Gate ✅
 - **MSO-LAYA-M0.6** Fine-tune Candidate ✅
-- **MSO-LAYA-M0.7** Candidate Re-eval Loop
+- **MSO-LAYA-M0.7** Candidate Re-eval Loop ✅
+- **MSO-LAYA-M0.8** Checkpoint Lineage / Rollback Registry
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

@@ -15,6 +15,14 @@ import {
   writeFineTunePack,
 } from "./finetune/candidate.js";
 import {
+  fingerprintLayaOnnxCheckpoint,
+} from "./reeval/checkpoint.js";
+import {
+  parseFineTuneValidationJsonl,
+  runCandidateReeval,
+  writeCandidateReevalArtifacts,
+} from "./reeval/candidate.js";
+import {
   parseDisagreementQueueJsonl,
   parseFineTuneAnnotationsJsonl,
 } from "./finetune/io.js";
@@ -36,7 +44,10 @@ import {
   parsePromotionReviewJsonl,
   parseShadowTraceJsonl,
 } from "./promotion/io.js";
-import { createLayaTsProvider } from "./providers/laya.js";
+import {
+  createLayaCheckpointProvider,
+  createLayaTsProvider,
+} from "./providers/laya.js";
 import { ReplaySystemOneProvider } from "./providers/replay.js";
 
 const usage = (): never => {
@@ -47,6 +58,7 @@ const usage = (): never => {
       "  mso disagreements <fixture.jsonl> [--providers replay,laya] [--pair replay:laya] [--focus laya] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
+      "  mso candidate-reeval --validation <validation.jsonl> --base-checkpoint <onnx-dir> --candidate-checkpoint <onnx-dir> --out-dir <dir> [--model english|multilingual|typed-decisions] [--incumbent-eval <eval.json>]\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -175,6 +187,90 @@ const runFineTunePack = async (args: readonly string[]): Promise<void> => {
   console.log(`out_dir=${outDir}`);
 };
 
+
+const checkpointModel = (
+  args: readonly string[],
+): "english" | "multilingual" | "typed-decisions" => {
+  const model = optionValue(args, "--model") ?? "english";
+  if (
+    model !== "english" &&
+    model !== "multilingual" &&
+    model !== "typed-decisions"
+  ) {
+    throw new Error("--model must be english|multilingual|typed-decisions");
+  }
+  return model;
+};
+
+const runCandidateReevalCli = async (
+  args: readonly string[],
+): Promise<void> => {
+  const validationPath = requiredOption(args, "--validation");
+  const baseCheckpointDir = requiredOption(args, "--base-checkpoint");
+  const candidateCheckpointDir = requiredOption(args, "--candidate-checkpoint");
+  const outDir = requiredOption(args, "--out-dir");
+  const model = checkpointModel(args);
+  const language = optionValue(args, "--lang");
+  const device = optionValue(args, "--device");
+  const baseId = optionValue(args, "--base-id") ?? "laya-base";
+  const candidateId = optionValue(args, "--candidate-id") ?? "laya-candidate";
+  const baseRef = optionValue(args, "--base-ref") ?? basename(baseCheckpointDir);
+  const candidateRef =
+    optionValue(args, "--candidate-ref") ?? basename(candidateCheckpointDir);
+  const datasetId =
+    optionValue(args, "--dataset") ?? basename(validationPath);
+
+  const cases = parseFineTuneValidationJsonl(
+    await readFile(validationPath, "utf8"),
+  );
+  const [baseCheckpoint, candidateCheckpoint] = await Promise.all([
+    fingerprintLayaOnnxCheckpoint(baseCheckpointDir, baseRef),
+    fingerprintLayaOnnxCheckpoint(candidateCheckpointDir, candidateRef),
+  ]);
+
+  const baseProvider = await createLayaCheckpointProvider({
+    id: baseId,
+    checkpointDir: baseCheckpointDir,
+    model,
+    ...(language ? { language } : {}),
+    ...(device ? { device } : {}),
+  });
+  const candidateProvider = await createLayaCheckpointProvider({
+    id: candidateId,
+    checkpointDir: candidateCheckpointDir,
+    model,
+    ...(language ? { language } : {}),
+    ...(device ? { device } : {}),
+  });
+
+  const incumbentPath = optionValue(args, "--incumbent-eval");
+  const incumbentRun = incumbentPath
+    ? parseEvalRun(await readJson(incumbentPath))
+    : undefined;
+
+  const result = await runCandidateReeval(
+    cases,
+    baseProvider,
+    candidateProvider,
+    {
+      datasetId,
+      baseCheckpoint,
+      candidateCheckpoint,
+      ...(incumbentRun ? { incumbentRun } : {}),
+    },
+  );
+  await writeCandidateReevalArtifacts(outDir, result);
+
+  const delta = result.evidence.deltas.candidateVsBase;
+  console.log(
+    `reeval=${result.evidence.reevalId} candidate=${candidateId} accuracy_delta=${delta.accuracy.toFixed(4)} regressions=${result.evidence.regressionCount} improvements=${result.evidence.improvementCount}`,
+  );
+  console.log(
+    `candidate_eval=${outDir}/candidate.eval.json promotion_input=yes`,
+  );
+  console.log(`summary=${outDir}/summary.json`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -186,6 +282,11 @@ const main = async (): Promise<void> => {
 
   if (command === "finetune-pack") {
     await runFineTunePack(args);
+    return;
+  }
+
+  if (command === "candidate-reeval") {
+    await runCandidateReevalCli(args);
     return;
   }
 

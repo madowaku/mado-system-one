@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { SystemOnePattern } from "../core/types.js";
 import type { EvalCase, EvalExpected } from "./skeleton.js";
 import type {
   ComparisonEvidence,
@@ -39,6 +40,7 @@ export interface DisagreementRecord {
   datasetId: string;
   caseId: string;
   taskFamily: string;
+  pattern: SystemOnePattern;
   questionId: string;
   questionType: "choice" | "noul" | "score";
   state: string;
@@ -301,6 +303,7 @@ export const buildDisagreementLab = (
         datasetId: evidence.datasetId,
         caseId: comparedCase.caseId,
         taskFamily: comparedCase.taskFamily,
+        pattern: fixture.pattern,
         questionId: comparedQuestion.questionId,
         questionType: comparedQuestion.type,
         state: fixture.state,

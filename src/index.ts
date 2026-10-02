@@ -16,6 +16,8 @@ export * from "./promotion/gate.js";
 export * from "./promotion/io.js";
 export * from "./finetune/candidate.js";
 export * from "./finetune/io.js";
+export * from "./reeval/checkpoint.js";
+export * from "./reeval/candidate.js";
 
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";
