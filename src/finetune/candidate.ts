@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { TypedQuestion } from "../core/types.js";
+import type { SystemOnePattern, TypedQuestion } from "../core/types.js";
 import type { DisagreementRecord } from "../eval/disagreement.js";
+import type { EvalExpected } from "../eval/skeleton.js";
 import { toLayaQuestions, type LayaQuestionDef } from "../providers/laya.js";
 
 export type FineTuneLabel = string | boolean | number;
@@ -73,6 +74,11 @@ export interface LayaFineTuneCase {
     recordIds: readonly string[];
     tags: readonly string[];
     language?: string;
+    evaluation: {
+      pattern: SystemOnePattern;
+      questions: Readonly<Record<string, TypedQuestion>>;
+      expected: Readonly<Record<string, EvalExpected>>;
+    };
   };
 }
 
@@ -364,6 +370,29 @@ const toReady = (
   };
 };
 
+
+const expectedFromReviewedLabel = (
+  question: TypedQuestion,
+  reviewedLabel: FineTuneLabel,
+): EvalExpected => {
+  if (question.type === "choice") {
+    if (typeof reviewedLabel !== "string") {
+      throw new Error("choice reviewedLabel must be a string");
+    }
+    return { type: "choice", selected: reviewedLabel };
+  }
+  if (question.type === "noul") {
+    if (typeof reviewedLabel !== "boolean") {
+      throw new Error("noul reviewedLabel must be boolean");
+    }
+    return { type: "noul", yes: reviewedLabel };
+  }
+  if (typeof reviewedLabel !== "number" || !Number.isFinite(reviewedLabel)) {
+    throw new Error("score reviewedLabel must be finite");
+  }
+  return { type: "score", value: reviewedLabel, tolerance: 0 };
+};
+
 const stableScore = (seed: string, value: string): string =>
   createHash("sha256").update(seed).update("\0").update(value).digest("hex");
 
@@ -428,6 +457,8 @@ const aggregateCases = (ready: readonly ReadyRecord[]): LayaFineTuneCase[] => {
 
     const questions: Record<string, LayaQuestionDef> = {};
     const gold: Record<string, LayaGoldQuestion> = {};
+    const evaluationQuestions: Record<string, TypedQuestion> = {};
+    const evaluationExpected: Record<string, EvalExpected> = {};
     for (const row of rows) {
       if (questions[row.source.questionId]) {
         throw new Error(
@@ -436,6 +467,11 @@ const aggregateCases = (ready: readonly ReadyRecord[]): LayaFineTuneCase[] => {
       }
       questions[row.source.questionId] = row.question;
       gold[row.source.questionId] = row.gold;
+      evaluationQuestions[row.source.questionId] = row.source.question;
+      evaluationExpected[row.source.questionId] = expectedFromReviewedLabel(
+        row.source.question,
+        row.annotation.reviewedLabel as FineTuneLabel,
+      );
     }
 
     const tags = [...new Set(rows.flatMap((row) => row.source.tags))].sort();
@@ -450,6 +486,11 @@ const aggregateCases = (ready: readonly ReadyRecord[]): LayaFineTuneCase[] => {
         recordIds: rows.map((row) => row.source.recordId).sort(),
         tags,
         ...(language ? { language } : {}),
+        evaluation: {
+          pattern: first.source.pattern,
+          questions: evaluationQuestions,
+          expected: evaluationExpected,
+        },
       },
     });
   }
