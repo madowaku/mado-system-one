@@ -24,6 +24,7 @@ Verifier     = prove
 - docs/MADO_LAYA_LINEAGE_RUNBOOK.md — checkpoint ancestry, promotion evidence, rollback safety, and rollback recording
 - docs/MADO_LAYA_CANARY_RUNBOOK.md — staged runtime authority, circuit-breaker fallback, stage evidence, and rollback drill
 - docs/MADO_LAYA_DRIFT_GUARD_RUNBOOK.md — rolling active-limited drift detection and incumbent-only AUTO HOLD
+- docs/MADO_LAYA_HOLD_RECOVERY_RUNBOOK.md — typed HOLD diagnosis, requalification evidence, and new-session restart
 
 ## v0.3 shape
 
@@ -553,6 +554,55 @@ npm run mso -- drift-evaluate \
 
 Every drift artifact keeps automaticHold=true and automaticRollback=false. Recovery requires diagnosis and a new reviewed activation session rather than silently clearing the old hold.
 
+## Hold Recovery / Requalification Gate
+
+MSO-LAYA-M1.1 makes AUTO HOLD recoverable without reopening the held activation session.
+
+~~~text
+AUTO HOLD
+   |
+diagnose
+   |
+provider/calibration issue ----> repair + replay PASS ----> new canary_1
+workload drift ----------------> rebaseline
+checkpoint regression ---------> new checkpoint lineage
+unknown -----------------------> diagnosis continues
+~~~
+
+The old activation session is never cleared in place. A successful same-checkpoint requalification emits a new M0.9 policy with a distinct policy id and stage canary_1.
+
+Run the gate with:
+
+~~~bash
+npm run mso -- hold-requalify \
+  --registry evidence/lineage/asset-qa.json \
+  --activation-policy evidence/canary/asset-qa-v2-active.policy.json \
+  --drift-policy evidence/drift/asset-qa-v2.policy.json \
+  --hold evidence/drift/asset-qa-v2.hold.json \
+  --recovery evidence/recovery/asset-qa-v2-recovery.json \
+  --recovery-traces evidence/recovery/asset-qa-v2-replay.jsonl \
+  --new-policy-id asset-qa-v2-restart-001 \
+  --out-dir evidence/recovery/asset-qa-v2-requalification
+~~~
+
+Same-checkpoint requalification is limited to provider_regression and calibration_drift. It requires operator review, an approval reference, diagnosis evidence, repair evidence, verification evidence, and a passing post-repair M1.0 drift window.
+
+workload_drift returns requires_rebaseline. checkpoint_regression returns requires_new_checkpoint. unknown returns diagnosis_required.
+
+Before issuing a restart policy, the gate rechecks the current M0.8 lineage: the held artifact must still be the promoted head with the same fingerprint and a currently known-good rollback target. The restart policy is pinned to the current lineage hash, so legitimate audit events during the HOLD do not force reuse of a stale activation hash.
+
+A passing result records:
+
+~~~text
+eligible_for_new_canary
+restartStage = canary_1
+automaticReactivation = false
+automaticRollback = false
+oldSessionReusable = false
+~~~
+
+Blocked results write requalification.json only. restart.policy.json exists only after the gate passes.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -578,7 +628,8 @@ Every drift artifact keeps automaticHold=true and automaticRollback=false. Recov
 - **MSO-LAYA-M0.8** Checkpoint Lineage / Rollback Registry ✅
 - **MSO-LAYA-M0.9** Canary Activation / Rollback Drill ✅
 - **MSO-LAYA-M1.0** Active-Limited Drift / Auto-Hold Guard ✅
-- **MSO-LAYA-M1.1** Hold Recovery / Requalification Gate
+- **MSO-LAYA-M1.1** Hold Recovery / Requalification Gate ✅
+- **MSO-LAYA-M1.2** Rebaseline / Recovery Canary Evidence Bridge
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
