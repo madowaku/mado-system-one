@@ -18,7 +18,7 @@ export interface DistributionEpochRegisteredPayload {
   distributionSummary: string;
   baseline: WorkloadBaselineMetrics;
   sourceBaselinePolicyId: string;
-  driftPolicyId: string;
+  sourceDriftPolicyId: string;
   sourceEvidenceRefs: readonly string[];
   rebaselineId?: string;
 }
@@ -73,7 +73,7 @@ export interface DerivedDistributionEpoch {
   distributionSummary: string;
   baseline: WorkloadBaselineMetrics;
   sourceBaselinePolicyId: string;
-  driftPolicyId: string;
+  sourceDriftPolicyId: string;
   sourceEvidenceRefs: readonly string[];
   rebaselineId?: string;
   bindingIds: readonly string[];
@@ -197,7 +197,7 @@ const applyEpoch = (
   nonEmpty(payload.epochId, "epochId");
   nonEmpty(payload.distributionSummary, "distributionSummary");
   nonEmpty(payload.sourceBaselinePolicyId, "sourceBaselinePolicyId");
-  nonEmpty(payload.driftPolicyId, "driftPolicyId");
+  nonEmpty(payload.sourceDriftPolicyId, "sourceDriftPolicyId");
   validateMetrics(payload.baseline, "baseline");
   uniqueStrings(payload.sourceEvidenceRefs, "sourceEvidenceRefs");
   if (payload.sourceEvidenceRefs.length === 0) {
@@ -250,7 +250,7 @@ const applyEpoch = (
     distributionSummary: payload.distributionSummary,
     baseline: { ...payload.baseline },
     sourceBaselinePolicyId: payload.sourceBaselinePolicyId,
-    driftPolicyId: payload.driftPolicyId,
+    sourceDriftPolicyId: payload.sourceDriftPolicyId,
     sourceEvidenceRefs: [...payload.sourceEvidenceRefs],
     ...(payload.rebaselineId
       ? { rebaselineId: payload.rebaselineId }
@@ -301,12 +301,6 @@ const applyBinding = (
       `activation policy is already bound to epoch ${payload.epochId}: ${payload.activationPolicyId}`,
     );
   }
-  if (payload.driftPolicyId !== epoch.driftPolicyId) {
-    throw new Error(
-      "checkpoint binding driftPolicyId must match the epoch drift policy",
-    );
-  }
-
   bindings[payload.bindingId] = { ...payload };
   epochs[payload.epochId] = {
     ...epoch,
@@ -608,7 +602,7 @@ export const registerInitialDistributionEpoch = (
         ),
         baseline: metricsFromDriftPolicy(driftPolicy),
         sourceBaselinePolicyId: driftPolicy.baseline.sourcePolicyId,
-        driftPolicyId: driftPolicy.policyId,
+        sourceDriftPolicyId: driftPolicy.policyId,
         sourceEvidenceRefs: uniqueStrings(
           options.sourceEvidenceRefs,
           "sourceEvidenceRefs",
@@ -709,7 +703,7 @@ export const registerRebaselineDistributionEpoch = (
         ),
         baseline: newMetrics,
         sourceBaselinePolicyId: driftPolicy.baseline.sourcePolicyId,
-        driftPolicyId: driftPolicy.policyId,
+        sourceDriftPolicyId: driftPolicy.policyId,
         sourceEvidenceRefs,
         rebaselineId: acceptance.rebaselineId,
       },
