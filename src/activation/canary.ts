@@ -692,6 +692,7 @@ const buildTrace = (
     comparableQuestions: comparable.length,
     agreements,
     disagreements,
+    questions,
     agreementRate:
       comparable.length === 0 ? 0 : agreements / comparable.length,
   };
