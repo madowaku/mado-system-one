@@ -413,7 +413,10 @@ test("workload drift candidate reports distribution delta and emits recovery can
   assert.equal(result.evidence.status, "pass");
   assert.equal(result.evidence.action, "eligible_for_recovery_canary");
   assert.equal(result.evidence.oldBaselineReplaced, false);
-  assert.equal(result.evidence.candidateBaseline.meanCandidateConfidence, 0.7);
+  assert.ok(
+    Math.abs(result.evidence.candidateBaseline.meanCandidateConfidence - 0.7) <
+      1e-12,
+  );
   assert.ok(result.evidence.delta.meanCandidateConfidence < 0);
   assert.equal(result.restartPolicy?.stage, "canary_1");
   assert.equal(result.restartPolicy?.trafficFraction, 0.01);
