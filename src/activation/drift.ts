@@ -441,10 +441,10 @@ export const evaluateDriftWindow = (
     ),
   ];
 
-  const status = checks.some((item) => item.status === "fail")
-    ? "fail"
-    : checks.some((item) => item.status === "blocked")
-      ? "blocked"
+  const status = checks.some((item) => item.status === "blocked")
+    ? "blocked"
+    : checks.some((item) => item.status === "fail")
+      ? "fail"
       : "pass";
 
   return {
