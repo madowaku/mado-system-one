@@ -193,14 +193,23 @@ test("limited-active canary gives authority only to explicitly eligible requests
   const wrongPattern = await provider.decide(
     request("wrong-pattern", { pattern: "act" }),
   );
+  const riskyRequest = request("blocked-risk");
+  const blockedRisk = await provider.decide({
+    ...riskyRequest,
+    metadata: {
+      ...riskyRequest.metadata,
+      riskTags: ["delete"],
+    },
+  });
   await provider.flush();
 
   assert.equal(eligible.providerId, "candidate");
   assert.equal(missingFlag.providerId, "incumbent");
   assert.equal(wrongSurface.providerId, "incumbent");
   assert.equal(wrongPattern.providerId, "incumbent");
+  assert.equal(blockedRisk.providerId, "incumbent");
   assert.equal(candidateCalls, 1);
-  assert.equal(sink.records.length, 4);
+  assert.equal(sink.records.length, 5);
   assert.equal(sink.records[1]?.fallbackReason, "outside_scope");
   assert.equal(
     sink.records[2]?.eligibilityReasons.includes("decision_surface_mismatch"),
@@ -208,6 +217,10 @@ test("limited-active canary gives authority only to explicitly eligible requests
   );
   assert.equal(
     sink.records[3]?.eligibilityReasons.includes("pattern_not_allowed"),
+    true,
+  );
+  assert.equal(
+    sink.records[4]?.eligibilityReasons.includes("blocked_risk_tag"),
     true,
   );
 });
