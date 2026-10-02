@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "mso.rebaseline-review.v0",
+  "rebaselineId": "asset-qa-v2-rebaseline-001",
+  "holdId": "hold-asset-qa-v2-active-drift-2026-10-03T00-00-00-000Z",
+  "recoveryId": "asset-qa-v2-workload-recovery-001",
+  "operatorReviewed": true,
+  "operatorApprovalRef": "ops-review:asset-qa-v2-rebaseline-001",
+  "distributionSummary": "The workload mix shifted toward UI-heavy assets while provider reliability remained bounded.",
+  "evidenceRefs": [
+    "distribution-delta:asset-qa-v2",
+    "product-change:asset-pipeline-ui-heavy"
+  ]
+}

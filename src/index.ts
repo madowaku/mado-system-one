@@ -27,6 +27,8 @@ export * from "./activation/drift.js";
 export * from "./activation/drift_io.js";
 export * from "./activation/recovery.js";
 export * from "./activation/recovery_io.js";
+export * from "./activation/rebaseline.js";
+export * from "./activation/rebaseline_io.js";
 
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";

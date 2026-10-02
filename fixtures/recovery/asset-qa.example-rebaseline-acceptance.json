@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "mso.rebaseline-acceptance-review.v0",
+  "rebaselineId": "asset-qa-v2-rebaseline-001",
+  "operatorReviewed": true,
+  "operatorApprovalRef": "ops-review:asset-qa-v2-rebaseline-acceptance",
+  "evidenceRefs": [
+    "canary-chain:asset-qa-v2-rebaseline-001"
+  ],
+  "acceptanceSummary": "Recovery canary passed 1%, 5%, and 25% with acceptable operational health on the new workload distribution."
+}
