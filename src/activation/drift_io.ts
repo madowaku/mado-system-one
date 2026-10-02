@@ -42,6 +42,11 @@ export const parseActiveLimitedDriftPolicy = (
   if (!record(value.baseline) || !record(value.window) || !record(value.thresholds)) {
     throw new Error("drift policy baseline/window/thresholds must be objects");
   }
+  if (value.automaticHold !== true || value.automaticRollback !== false) {
+    throw new Error(
+      "drift policy must use automaticHold=true and automaticRollback=false",
+    );
+  }
 
   const policy: ActiveLimitedDriftPolicy = {
     schemaVersion: "mso.drift-policy.v0",
@@ -152,8 +157,8 @@ export const parseActiveLimitedDriftPolicy = (
         "thresholds.maxMeanCandidateConfidenceDelta",
       ),
     },
-    automaticHold: value.automaticHold === true,
-    automaticRollback: value.automaticRollback === false ? false : true,
+    automaticHold: true,
+    automaticRollback: false,
   };
 
   validateDriftPolicy(policy);
