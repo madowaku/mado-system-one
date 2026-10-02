@@ -262,6 +262,7 @@ export interface CanaryTrace {
   agreements: number;
   disagreements: number;
   agreementRate: number;
+  questions: readonly CanaryQuestionComparison[];
 }
 
 export interface CanaryActivationProviderOptions {
