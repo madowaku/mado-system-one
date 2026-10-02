@@ -49,6 +49,23 @@ import {
   createLayaTsProvider,
 } from "./providers/laya.js";
 import { ReplaySystemOneProvider } from "./providers/replay.js";
+import {
+  appendLineageEvent,
+  assertPromotionEvidence,
+  createCheckpointLineageRegistry,
+  deriveLineageState,
+  planRollback,
+  recordRollback,
+} from "./lineage/registry.js";
+import {
+  mutateCheckpointLineageRegistry,
+  parseCandidateReevalEvidence,
+  parsePromotionGateEvidence,
+  parseRollbackPlan,
+  readCheckpointLineageRegistry,
+  writeCheckpointLineageRegistry,
+  writeRollbackPlan,
+} from "./lineage/io.js";
 
 const usage = (): never => {
   console.error(
@@ -59,6 +76,12 @@ const usage = (): never => {
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
       "  mso candidate-reeval --validation <validation.jsonl> --base-checkpoint <onnx-dir> --candidate-checkpoint <onnx-dir> --out-dir <dir> [--model english|multilingual|typed-decisions] [--incumbent-eval <eval.json>]\n" +
+      "  mso lineage-init --registry <registry.json> --registry-id <id> --surface <decision-surface>\n" +
+      "  mso lineage-register --registry <registry.json> --checkpoint-id <id> --checkpoint-dir <onnx-dir> [--ref <name>] [--origin base|fine_tune|imported] [--parent <id>] [--known-good] [--reeval <summary.json>] [--pack-ref <ref>]\n" +
+      "  mso lineage-promote --registry <registry.json> --checkpoint-id <id> --gate <gate.json> --reeval <summary.json> --rollback-target <id>\n" +
+      "  mso rollback-plan --registry <registry.json> --to <checkpoint-id> --reason <text> --out <plan.json> [--from <checkpoint-id>]\n" +
+      "  mso lineage-record-rollback --registry <registry.json> --plan <plan.json> --execution-ref <ref>\n" +
+      "  mso lineage-show --registry <registry.json>\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -271,9 +294,222 @@ const runCandidateReevalCli = async (
   console.log(`summary=${outDir}/summary.json`);
 };
 
+
+const flag = (args: readonly string[], name: string): boolean =>
+  args.includes(name);
+
+const lineageOrigin = (
+  args: readonly string[],
+): "base" | "fine_tune" | "imported" => {
+  const value = optionValue(args, "--origin") ?? "imported";
+  if (value !== "base" && value !== "fine_tune" && value !== "imported") {
+    throw new Error("--origin must be base|fine_tune|imported");
+  }
+  return value;
+};
+
+const runLineageInit = async (args: readonly string[]): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const registry = createCheckpointLineageRegistry(
+    requiredOption(args, "--registry-id"),
+    requiredOption(args, "--surface"),
+  );
+  await writeCheckpointLineageRegistry(registryPath, registry);
+  console.log(
+    `registry=${registry.registryId} surface=${registry.decisionSurface} events=0`,
+  );
+  console.log(`path=${registryPath}`);
+};
+
+const runLineageRegister = async (args: readonly string[]): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const checkpointId = requiredOption(args, "--checkpoint-id");
+  const checkpointDir = requiredOption(args, "--checkpoint-dir");
+  const checkpointRef = optionValue(args, "--ref") ?? basename(checkpointDir);
+  const parentCheckpointId = optionValue(args, "--parent");
+  const origin = lineageOrigin(args);
+  const fineTunePackRef = optionValue(args, "--pack-ref");
+  const reevalPath = optionValue(args, "--reeval");
+  const knownGood = flag(args, "--known-good");
+  const checkpoint = await fingerprintLayaOnnxCheckpoint(
+    checkpointDir,
+    checkpointRef,
+  );
+  const reeval = reevalPath
+    ? parseCandidateReevalEvidence(await readJson(reevalPath))
+    : undefined;
+
+  const next = await mutateCheckpointLineageRegistry(
+    registryPath,
+    (registry) => {
+      const state = deriveLineageState(registry);
+      if (reeval) {
+        if (
+          reeval.candidateCheckpoint.fingerprint !== checkpoint.fingerprint
+        ) {
+          throw new Error(
+            "re-eval candidate fingerprint does not match checkpoint being registered",
+          );
+        }
+        if (parentCheckpointId) {
+          const parent = state.checkpoints[parentCheckpointId];
+          if (!parent) {
+            throw new Error(
+              `parent checkpoint is not registered: ${parentCheckpointId}`,
+            );
+          }
+          if (
+            reeval.baseCheckpoint.fingerprint !==
+            parent.checkpoint.fingerprint
+          ) {
+            throw new Error(
+              "re-eval base fingerprint does not match registered parent checkpoint",
+            );
+          }
+        }
+      }
+
+      return appendLineageEvent(registry, {
+        type: "checkpoint_registered",
+        data: {
+          checkpointId,
+          checkpoint,
+          origin,
+          knownGood,
+          ...(parentCheckpointId ? { parentCheckpointId } : {}),
+          ...(fineTunePackRef ? { fineTunePackRef } : {}),
+          ...(reevalPath ? { reevalEvidenceRef: reevalPath } : {}),
+          ...(reeval ? { reevalId: reeval.reevalId } : {}),
+        },
+      });
+    },
+  );
+  const state = deriveLineageState(next);
+  console.log(
+    `registered=${checkpointId} fingerprint=${checkpoint.fingerprint} known_good=${knownGood}`,
+  );
+  console.log(
+    `events=${state.eventCount} head_hash=${state.headEventHash ?? "none"}`,
+  );
+};
+
+const runLineagePromote = async (args: readonly string[]): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const checkpointId = requiredOption(args, "--checkpoint-id");
+  const gatePath = requiredOption(args, "--gate");
+  const reevalPath = requiredOption(args, "--reeval");
+  const rollbackTargetId = requiredOption(args, "--rollback-target");
+  const gate = parsePromotionGateEvidence(await readJson(gatePath));
+  const reeval = parseCandidateReevalEvidence(await readJson(reevalPath));
+
+  const next = await mutateCheckpointLineageRegistry(
+    registryPath,
+    (registry) => {
+      assertPromotionEvidence(registry, checkpointId, gate, reeval);
+      return appendLineageEvent(registry, {
+        type: "promotion_recorded",
+        data: {
+          checkpointId,
+          gateId: gate.gateId,
+          gateEvidenceRef: gatePath,
+          reevalId: reeval.reevalId,
+          reevalEvidenceRef: reevalPath,
+          rollbackTargetId,
+        },
+      });
+    },
+  );
+  const state = deriveLineageState(next);
+  console.log(
+    `promoted=${checkpointId} recorded_head=${state.recordedHeadCheckpointId ?? "none"} rollback_target=${rollbackTargetId}`,
+  );
+  console.log(
+    "runtime_authority_changed=false action=registry_evidence_only",
+  );
+};
+
+const runRollbackPlanCli = async (args: readonly string[]): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const outPath = requiredOption(args, "--out");
+  const registry = await readCheckpointLineageRegistry(registryPath);
+  const plan = planRollback(
+    registry,
+    requiredOption(args, "--to"),
+    {
+      reason: requiredOption(args, "--reason"),
+      ...(optionValue(args, "--from")
+        ? { fromCheckpointId: optionValue(args, "--from") }
+        : {}),
+    },
+  );
+  await writeRollbackPlan(outPath, plan);
+  console.log(
+    `plan=${plan.planId} from=${plan.fromCheckpointId} to=${plan.toCheckpointId} steps=${plan.path.join("->")}`,
+  );
+  console.log(
+    "automatic_execution=false runtime_authority_changed=false",
+  );
+  console.log(`out=${outPath}`);
+};
+
+const runLineageRecordRollback = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const planPath = requiredOption(args, "--plan");
+  const executionRef = requiredOption(args, "--execution-ref");
+  const plan = parseRollbackPlan(await readJson(planPath));
+  const next = await mutateCheckpointLineageRegistry(
+    registryPath,
+    (registry) => recordRollback(registry, plan, executionRef),
+  );
+  const state = deriveLineageState(next);
+  console.log(
+    `rollback_recorded=${plan.planId} recorded_head=${state.recordedHeadCheckpointId ?? "none"} execution_ref=${executionRef}`,
+  );
+  console.log("registry_record_only=true");
+};
+
+const runLineageShow = async (args: readonly string[]): Promise<void> => {
+  const registry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--registry"),
+  );
+  console.log(JSON.stringify(deriveLineageState(registry), null, 2));
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
+
+  if (command === "lineage-init") {
+    await runLineageInit(args);
+    return;
+  }
+
+  if (command === "lineage-register") {
+    await runLineageRegister(args);
+    return;
+  }
+
+  if (command === "lineage-promote") {
+    await runLineagePromote(args);
+    return;
+  }
+
+  if (command === "rollback-plan") {
+    await runRollbackPlanCli(args);
+    return;
+  }
+
+  if (command === "lineage-record-rollback") {
+    await runLineageRecordRollback(args);
+    return;
+  }
+
+  if (command === "lineage-show") {
+    await runLineageShow(args);
+    return;
+  }
 
   if (command === "promotion-check") {
     await runPromotionCheck(args);
