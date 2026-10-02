@@ -189,6 +189,51 @@ export const parseCanaryAdvancePolicy = (
   };
 };
 
+export const parseCanaryAdvanceEvidence = (
+  value: unknown,
+): CanaryAdvanceEvidence => {
+  if (!record(value) || value.schemaVersion !== "mso.canary-advance.v0") {
+    throw new Error(
+      "canary advance evidence must use schemaVersion mso.canary-advance.v0",
+    );
+  }
+  const currentStage = stage(value.currentStage, "currentStage");
+  const nextStage =
+    value.nextStage === null ? null : stage(value.nextStage, "nextStage");
+  if (
+    value.status !== "pass" &&
+    value.status !== "fail" &&
+    value.status !== "blocked"
+  ) {
+    throw new Error("canary advance evidence has unsupported status");
+  }
+  if (
+    value.action !== "eligible_for_next_stage" &&
+    value.action !== "hold_current_stage" &&
+    value.action !== "limited_active_complete"
+  ) {
+    throw new Error("canary advance evidence has unsupported action");
+  }
+  if (value.automaticStageAdvance !== false || !record(value.summary)) {
+    throw new Error(
+      "canary advance evidence must disable automatic stage advance and include summary",
+    );
+  }
+  return {
+    schemaVersion: "mso.canary-advance.v0",
+    policyId: text(value.policyId, "policyId"),
+    currentStage,
+    nextStage,
+    status: value.status,
+    action: value.action,
+    automaticStageAdvance: false,
+    checks: Array.isArray(value.checks)
+      ? (value.checks as CanaryAdvanceEvidence["checks"])
+      : [],
+    summary: value.summary as unknown as CanaryAdvanceEvidence["summary"],
+  };
+};
+
 export const parseCanaryTraceJsonl = (input: string): CanaryTrace[] => {
   const rows: CanaryTrace[] = [];
   const seen = new Set<string>();
@@ -247,5 +292,13 @@ export const readCanaryActivationPolicy = async (
   path: string,
 ): Promise<CanaryActivationPolicy> =>
   parseCanaryActivationPolicy(
+    JSON.parse(await readFile(path, "utf8")) as unknown,
+  );
+
+
+export const readCanaryAdvanceEvidence = async (
+  path: string,
+): Promise<CanaryAdvanceEvidence> =>
+  parseCanaryAdvanceEvidence(
     JSON.parse(await readFile(path, "utf8")) as unknown,
   );
