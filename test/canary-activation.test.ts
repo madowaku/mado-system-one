@@ -140,6 +140,9 @@ const request = (
   metadata: {
     decisionSurface: options.surface ?? "asset.qa",
     canaryEligible: options.eligible ?? true,
+    reversible: true,
+    impactClass: "low",
+    riskTags: [],
   },
 });
 
