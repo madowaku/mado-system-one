@@ -489,12 +489,13 @@ export const buildWorkloadRebaselineCandidate = (
     ),
   ];
 
-  const status = checks.some((item) => item.status === "fail")
-    ? "fail"
-    : checks.some((item) => item.status === "blocked")
-      ? "blocked"
-      : "pass";
-  const action =
+  const status: WorkloadRebaselineCandidateEvidence["status"] =
+    checks.some((item) => item.status === "fail")
+      ? "fail"
+      : checks.some((item) => item.status === "blocked")
+        ? "blocked"
+        : "pass";
+  const action: WorkloadRebaselineCandidateEvidence["action"] =
     status === "fail"
       ? "unhealthy_baseline_candidate"
       : status === "blocked"
