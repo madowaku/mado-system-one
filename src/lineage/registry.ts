@@ -332,6 +332,15 @@ const applyPromotion = (
       `promotion checkpoint is not registered: ${payload.checkpointId}`,
     );
   }
+  if (
+    recordedHeadCheckpointId &&
+    checkpoint.parentCheckpointId !== recordedHeadCheckpointId
+  ) {
+    throw new Error(
+      `promotion candidate parent ${checkpoint.parentCheckpointId ?? "none"} does not match recorded head ${recordedHeadCheckpointId}`,
+    );
+  }
+
   const rollbackTarget = checkpoints[payload.rollbackTargetId];
   if (!rollbackTarget) {
     throw new Error(
@@ -565,11 +574,19 @@ export const planRollback = (
 ): RollbackPlan => {
   verifyLineageRegistry(registry);
   const state = deriveLineageState(registry);
-  const fromCheckpointId =
-    options.fromCheckpointId ?? state.recordedHeadCheckpointId;
-  if (!fromCheckpointId) {
+  const recordedHeadCheckpointId = state.recordedHeadCheckpointId;
+  if (!recordedHeadCheckpointId) {
     throw new Error("lineage registry has no recorded head checkpoint");
   }
+  if (
+    options.fromCheckpointId &&
+    options.fromCheckpointId !== recordedHeadCheckpointId
+  ) {
+    throw new Error(
+      `rollback source assertion ${options.fromCheckpointId} does not match recorded head ${recordedHeadCheckpointId}`,
+    );
+  }
+  const fromCheckpointId = recordedHeadCheckpointId;
   const target = state.checkpoints[toCheckpointId];
   if (!target) {
     throw new Error(`rollback target is not registered: ${toCheckpointId}`);
