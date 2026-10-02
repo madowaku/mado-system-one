@@ -14,6 +14,7 @@ import {
   parseCanaryAdvancePolicy,
   parseCanaryTraceJsonl,
   readCanaryActivationPolicy,
+  readCanaryAdvanceEvidence,
   writeCanaryActivationPolicy,
   writeCanaryAdvanceEvidence,
 } from "./activation/io.js";
@@ -36,6 +37,17 @@ import {
   readHoldRecoveryCase,
   writeHoldRequalificationResult,
 } from "./activation/recovery_io.js";
+import {
+  acceptWorkloadRebaseline,
+  buildWorkloadRebaselineCandidate,
+} from "./activation/rebaseline.js";
+import {
+  readWorkloadRebaselineAcceptanceReview,
+  readWorkloadRebaselineCandidateEvidence,
+  readWorkloadRebaselineReview,
+  writeWorkloadRebaselineAcceptanceResult,
+  writeWorkloadRebaselineCandidateResult,
+} from "./activation/rebaseline_io.js";
 import {
   runComparison,
   writeComparisonEvidence,
@@ -123,6 +135,8 @@ const usage = (): never => {
       "  mso drift-plan --activation-policy <limited-active-policy.json> --baseline-policy <canary-policy.json> --baseline-traces <traces.jsonl> --policy-id <id> --window-size <n> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-disagreement <0..1> --max-latency-ratio <n> --max-confidence-delta <0..1> --out <policy.json>\n" +
       "  mso drift-evaluate --activation-policy <limited-active-policy.json> --drift-policy <policy.json> --traces <traces.jsonl> --out <evidence.json>\n" +
       "  mso hold-requalify --registry <registry.json> --activation-policy <held-policy.json> --drift-policy <drift-policy.json> --hold <hold.json> --recovery <recovery.json> --recovery-traces <traces.jsonl> --new-policy-id <id> --out-dir <dir>\n" +
+      "  mso rebaseline-plan --registry <registry.json> --activation-policy <held-policy.json> --drift-policy <drift-policy.json> --hold <hold.json> --recovery <recovery.json> --candidate-traces <traces.jsonl> --review <review.json> --new-policy-id <id> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-latency-ratio <n> --out-dir <dir>\n" +
+      "  mso rebaseline-accept --registry <registry.json> --candidate <rebaseline.candidate.json> --canary-1-policy <policy.json> --canary-1-advance <advance.json> --canary-5-policy <policy.json> --canary-5-advance <advance.json> --canary-25-policy <policy.json> --canary-25-advance <advance.json> --review <acceptance-review.json> --limited-active-policy-id <id> --drift-policy-id <id> --window-size <n> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-disagreement <0..1> --max-latency-ratio <n> --max-confidence-delta <0..1> --out-dir <dir>\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -864,6 +878,176 @@ const runHoldRequalify = async (
   console.log(`out_dir=${outDir}`);
 };
 
+
+const runRebaselinePlan = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--registry"),
+  );
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const driftPolicy = await readActiveLimitedDriftPolicy(
+    requiredOption(args, "--drift-policy"),
+  );
+  const hold = await readDriftHoldEvent(
+    requiredOption(args, "--hold"),
+  );
+  const recovery = await readHoldRecoveryCase(
+    requiredOption(args, "--recovery"),
+  );
+  const traces = parseCanaryTraceJsonl(
+    await readFile(requiredOption(args, "--candidate-traces"), "utf8"),
+  );
+  const review = await readWorkloadRebaselineReview(
+    requiredOption(args, "--review"),
+  );
+
+  const result = buildWorkloadRebaselineCandidate(
+    registry,
+    activationPolicy,
+    driftPolicy,
+    hold,
+    recovery,
+    traces,
+    review,
+    {
+      minCandidateSelected: requiredNumberOption(args, "--min-selected"),
+      minComparableQuestions: requiredNumberOption(args, "--min-comparable"),
+      minCandidateConfidenceSamples: requiredNumberOption(
+        args,
+        "--min-confidence-samples",
+      ),
+      maxCandidateErrorRate: requiredNumberOption(
+        args,
+        "--max-candidate-error",
+      ),
+      maxIncumbentErrorRate: requiredNumberOption(
+        args,
+        "--max-incumbent-error",
+      ),
+      maxFallbackRate: requiredNumberOption(args, "--max-fallback"),
+      maxP95LatencyRatio: requiredNumberOption(
+        args,
+        "--max-latency-ratio",
+      ),
+    },
+    {
+      newCanaryPolicyId: requiredOption(args, "--new-policy-id"),
+    },
+  );
+  const outDir = requiredOption(args, "--out-dir");
+  await writeWorkloadRebaselineCandidateResult(outDir, result);
+
+  console.log(
+    `rebaseline=${result.evidence.rebaselineId} status=${result.evidence.status} action=${result.evidence.action} confidence_delta=${result.evidence.delta.meanCandidateConfidence.toFixed(4)} disagreement_delta=${result.evidence.delta.disagreementRate.toFixed(4)}`,
+  );
+  console.log(
+    `old_baseline_replaced=false automatic_activation=false`,
+  );
+  if (result.restartPolicy) {
+    console.log(
+      `recovery_canary_policy=${result.restartPolicy.policyId} stage=${result.restartPolicy.stage}`,
+    );
+  }
+  console.log(`out_dir=${outDir}`);
+};
+
+const runRebaselineAccept = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--registry"),
+  );
+  const candidate = await readWorkloadRebaselineCandidateEvidence(
+    requiredOption(args, "--candidate"),
+  );
+  const canary1 = await readCanaryActivationPolicy(
+    requiredOption(args, "--canary-1-policy"),
+  );
+  const canary5 = await readCanaryActivationPolicy(
+    requiredOption(args, "--canary-5-policy"),
+  );
+  const canary25 = await readCanaryActivationPolicy(
+    requiredOption(args, "--canary-25-policy"),
+  );
+  const advance1 = await readCanaryAdvanceEvidence(
+    requiredOption(args, "--canary-1-advance"),
+  );
+  const advance5 = await readCanaryAdvanceEvidence(
+    requiredOption(args, "--canary-5-advance"),
+  );
+  const advance25 = await readCanaryAdvanceEvidence(
+    requiredOption(args, "--canary-25-advance"),
+  );
+  const review = await readWorkloadRebaselineAcceptanceReview(
+    requiredOption(args, "--review"),
+  );
+
+  const result = acceptWorkloadRebaseline(
+    registry,
+    candidate,
+    [canary1, canary5, canary25],
+    [advance1, advance5, advance25],
+    review,
+    {
+      limitedActivePolicyId: requiredOption(
+        args,
+        "--limited-active-policy-id",
+      ),
+      driftPolicyId: requiredOption(args, "--drift-policy-id"),
+      driftWindow: {
+        size: requiredNumberOption(args, "--window-size"),
+        minCandidateSelected: requiredNumberOption(args, "--min-selected"),
+        minComparableQuestions: requiredNumberOption(args, "--min-comparable"),
+        minCandidateConfidenceSamples: requiredNumberOption(
+          args,
+          "--min-confidence-samples",
+        ),
+      },
+      driftThresholds: {
+        maxCandidateErrorRate: requiredNumberOption(
+          args,
+          "--max-candidate-error",
+        ),
+        maxIncumbentErrorRate: requiredNumberOption(
+          args,
+          "--max-incumbent-error",
+        ),
+        maxFallbackRate: requiredNumberOption(args, "--max-fallback"),
+        maxDisagreementRate: requiredNumberOption(
+          args,
+          "--max-disagreement",
+        ),
+        maxP95LatencyRatio: requiredNumberOption(
+          args,
+          "--max-latency-ratio",
+        ),
+        maxMeanCandidateConfidenceDelta: requiredNumberOption(
+          args,
+          "--max-confidence-delta",
+        ),
+      },
+    },
+  );
+  const outDir = requiredOption(args, "--out-dir");
+  await writeWorkloadRebaselineAcceptanceResult(outDir, result);
+
+  console.log(
+    `rebaseline=${result.evidence.rebaselineId} status=${result.evidence.status} action=${result.evidence.action}`,
+  );
+  console.log(
+    `automatic_activation=false old_baseline_replaced=false recovery_chain=${result.evidence.recoveryCanaryPolicyIds.join("->")}`,
+  );
+  if (result.limitedActivePolicy && result.driftPolicy) {
+    console.log(
+      `limited_active_policy=${result.limitedActivePolicy.policyId} drift_policy=${result.driftPolicy.policyId} baseline_source=${result.driftPolicy.baseline.sourcePolicyId}`,
+    );
+  }
+  console.log(`out_dir=${outDir}`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -930,6 +1114,16 @@ const main = async (): Promise<void> => {
 
   if (command === "hold-requalify") {
     await runHoldRequalify(args);
+    return;
+  }
+
+  if (command === "rebaseline-plan") {
+    await runRebaselinePlan(args);
+    return;
+  }
+
+  if (command === "rebaseline-accept") {
+    await runRebaselineAccept(args);
     return;
   }
 
