@@ -161,9 +161,17 @@ export const parseCanaryAdvancePolicy = (
       value.minCandidateSelected,
       "minCandidateSelected",
     ),
+    minComparableQuestions: integer(
+      value.minComparableQuestions,
+      "minComparableQuestions",
+    ),
     maxCandidateErrorRate: number(
       value.maxCandidateErrorRate,
       "maxCandidateErrorRate",
+    ),
+    maxIncumbentErrorRate: number(
+      value.maxIncumbentErrorRate,
+      "maxIncumbentErrorRate",
     ),
     maxFallbackRate: number(value.maxFallbackRate, "maxFallbackRate"),
     maxDisagreementRate: number(
