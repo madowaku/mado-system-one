@@ -352,7 +352,6 @@ test("missing operator approval keeps the hold in place", () => {
     holdEvent(active, drift.policyId),
     recoveryCase("provider_regression", {
       operatorReviewed: false,
-      operatorApprovalRef: undefined,
     }),
     recoveryWindow(active, drift.policyId),
     { newActivationPolicyId: "blocked-restart" },
