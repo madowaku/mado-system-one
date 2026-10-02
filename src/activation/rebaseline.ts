@@ -132,9 +132,13 @@ export interface WorkloadRebaselineAcceptanceEvidence {
   decisionSurface: string;
   candidateCheckpointId: string;
   candidateFingerprint: string;
-  recoveryCanaryPolicyId: string;
-  recoveryCanaryStage: "canary_25";
-  recoveryCanaryAdvanceAction: "eligible_for_next_stage";
+  recoveryCanaryPolicyIds: readonly [string, string, string];
+  recoveryCanaryStages: readonly ["canary_1", "canary_5", "canary_25"];
+  recoveryCanaryAdvanceActions: readonly [
+    "eligible_for_next_stage",
+    "eligible_for_next_stage",
+    "eligible_for_next_stage",
+  ];
   status: "pass" | "blocked";
   action: "eligible_for_limited_active" | "hold_remains";
   automaticActivation: false;
@@ -546,8 +550,16 @@ export const buildWorkloadRebaselineCandidate = (
 export const acceptWorkloadRebaseline = (
   registry: CheckpointLineageRegistry,
   candidateEvidence: WorkloadRebaselineCandidateEvidence,
-  recoveryCanaryPolicy: CanaryActivationPolicy,
-  advanceEvidence: CanaryAdvanceEvidence,
+  recoveryCanaryPolicies: readonly [
+    CanaryActivationPolicy,
+    CanaryActivationPolicy,
+    CanaryActivationPolicy,
+  ],
+  advanceEvidences: readonly [
+    CanaryAdvanceEvidence,
+    CanaryAdvanceEvidence,
+    CanaryAdvanceEvidence,
+  ],
   review: WorkloadRebaselineAcceptanceReview,
   options: {
     limitedActivePolicyId: string;
@@ -567,30 +579,53 @@ export const acceptWorkloadRebaseline = (
   if (review.rebaselineId !== candidateEvidence.rebaselineId) {
     throw new Error("rebaseline acceptance review identity mismatch");
   }
-  if (
-    recoveryCanaryPolicy.candidateCheckpointId !==
-      candidateEvidence.candidateCheckpointId ||
-    recoveryCanaryPolicy.candidateFingerprint !==
-      candidateEvidence.candidateFingerprint ||
-    recoveryCanaryPolicy.decisionSurface !==
-      candidateEvidence.decisionSurface
-  ) {
-    throw new Error("recovery canary does not match rebaseline candidate");
+  const [canary1, canary5, canary25] = recoveryCanaryPolicies;
+  const [advance1, advance5, advance25] = advanceEvidences;
+  const expectedStages = [
+    ["canary_1", "canary_5"],
+    ["canary_5", "canary_25"],
+    ["canary_25", "limited_active"],
+  ] as const;
+  for (const policy of recoveryCanaryPolicies) {
+    if (
+      policy.candidateCheckpointId !==
+        candidateEvidence.candidateCheckpointId ||
+      policy.candidateFingerprint !== candidateEvidence.candidateFingerprint ||
+      policy.decisionSurface !== candidateEvidence.decisionSurface ||
+      policy.candidateProviderId !== canary1.candidateProviderId ||
+      policy.incumbentProviderId !== canary1.incumbentProviderId ||
+      policy.lineageHeadEventHash !== canary1.lineageHeadEventHash
+    ) {
+      throw new Error("recovery canary policy chain identity mismatch");
+    }
   }
   if (
-    recoveryCanaryPolicy.stage !== "canary_25" ||
-    advanceEvidence.policyId !== recoveryCanaryPolicy.policyId ||
-    advanceEvidence.currentStage !== "canary_25" ||
-    advanceEvidence.nextStage !== "limited_active" ||
-    advanceEvidence.status !== "pass" ||
-    advanceEvidence.action !== "eligible_for_next_stage" ||
-    advanceEvidence.automaticStageAdvance !== false
+    candidateEvidence.restartPolicyId !== canary1.policyId ||
+    canary1.stage !== "canary_1" ||
+    canary5.stage !== "canary_5" ||
+    canary25.stage !== "canary_25"
   ) {
-    throw new Error(
-      "rebaseline acceptance requires a passing canary_25 advance evidence",
-    );
+    throw new Error("recovery canary policy stages do not match rebaseline bridge");
   }
-  assertCurrentLineage(registry, recoveryCanaryPolicy);
+  for (const [index, evidence] of advanceEvidences.entries()) {
+    const policy = recoveryCanaryPolicies[index];
+    const expected = expectedStages[index];
+    if (
+      !policy ||
+      !expected ||
+      evidence.policyId !== policy.policyId ||
+      evidence.currentStage !== expected[0] ||
+      evidence.nextStage !== expected[1] ||
+      evidence.status !== "pass" ||
+      evidence.action !== "eligible_for_next_stage" ||
+      evidence.automaticStageAdvance !== false
+    ) {
+      throw new Error(
+        "rebaseline acceptance requires a complete passing recovery-canary evidence chain",
+      );
+    }
+  }
+  assertCurrentLineage(registry, canary25);
   nonEmpty(options.limitedActivePolicyId, "limitedActivePolicyId");
   nonEmpty(options.driftPolicyId, "driftPolicyId");
 
@@ -606,12 +641,24 @@ export const acceptWorkloadRebaseline = (
     decisionSurface: candidateEvidence.decisionSurface,
     candidateCheckpointId: candidateEvidence.candidateCheckpointId,
     candidateFingerprint: candidateEvidence.candidateFingerprint,
-    recoveryCanaryPolicyId: recoveryCanaryPolicy.policyId,
-    recoveryCanaryStage: "canary_25" as const,
-    recoveryCanaryAdvanceAction: "eligible_for_next_stage" as const,
+    recoveryCanaryPolicyIds: [
+      canary1.policyId,
+      canary5.policyId,
+      canary25.policyId,
+    ] as const,
+    recoveryCanaryStages: [
+      "canary_1",
+      "canary_5",
+      "canary_25",
+    ] as const,
+    recoveryCanaryAdvanceActions: [
+      "eligible_for_next_stage",
+      "eligible_for_next_stage",
+      "eligible_for_next_stage",
+    ] as const,
     automaticActivation: false as const,
     oldBaselineReplaced: false as const,
-    acceptedBaseline: metricsFromSummary(advanceEvidence.summary),
+    acceptedBaseline: metricsFromSummary(advance25.summary),
     review,
   };
 
@@ -627,16 +674,16 @@ export const acceptWorkloadRebaseline = (
 
   const limitedActivePolicy = buildCanaryActivationPolicy(registry, {
     policyId: options.limitedActivePolicyId,
-    candidateProviderId: recoveryCanaryPolicy.candidateProviderId,
-    incumbentProviderId: recoveryCanaryPolicy.incumbentProviderId,
+    candidateProviderId: canary25.candidateProviderId,
+    incumbentProviderId: canary25.incumbentProviderId,
     stage: "limited_active",
-    allowedPatterns: [...recoveryCanaryPolicy.allowedPatterns],
-    circuitBreaker: { ...recoveryCanaryPolicy.circuitBreaker },
+    allowedPatterns: [...canary25.allowedPatterns],
+    circuitBreaker: { ...canary25.circuitBreaker },
   });
   const driftPolicy = buildActiveLimitedDriftPolicy(
     limitedActivePolicy,
-    recoveryCanaryPolicy,
-    advanceEvidence.summary,
+    canary25,
+    advance25.summary,
     {
       policyId: options.driftPolicyId,
       window: options.driftWindow,
