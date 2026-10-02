@@ -225,7 +225,23 @@ export const verifyLineageRegistry = (
 
   let previousHash: string | null = null;
   const seenEventIds = new Set<string>();
+  const allowedEventTypes = new Set([
+    "checkpoint_registered",
+    "promotion_recorded",
+    "rollback_safety_set",
+    "rollback_recorded",
+  ]);
   for (const [index, event] of registry.events.entries()) {
+    const rawPayload = event.payload as unknown;
+    if (
+      typeof rawPayload !== "object" ||
+      rawPayload === null ||
+      !("type" in rawPayload) ||
+      !("data" in rawPayload) ||
+      !allowedEventTypes.has(String((rawPayload as { type?: unknown }).type))
+    ) {
+      throw new Error(`lineage event ${index} has unsupported payload`);
+    }
     if (seenEventIds.has(event.eventId)) {
       throw new Error(`duplicate lineage eventId: ${event.eventId}`);
     }
@@ -255,6 +271,15 @@ const applyRegistration = (
   payload: CheckpointRegisteredPayload,
 ): void => {
   nonEmpty(payload.checkpointId, "checkpointId");
+  if (
+    payload.checkpoint.schemaVersion !== "mso.laya-checkpoint.v0" ||
+    payload.checkpoint.format !== "laya-ts-onnx" ||
+    !/^[a-f0-9]{64}$/i.test(payload.checkpoint.fingerprint)
+  ) {
+    throw new Error(
+      `checkpoint ${payload.checkpointId} has invalid Laya ONNX fingerprint contract`,
+    );
+  }
   if (checkpoints[payload.checkpointId]) {
     throw new Error(`checkpoint already registered: ${payload.checkpointId}`);
   }
@@ -460,6 +485,8 @@ export const deriveLineageState = (
           recordedHeadCheckpointId,
         );
         break;
+      default:
+        throw new Error("unsupported lineage event type");
     }
   }
 
