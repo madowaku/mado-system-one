@@ -42,6 +42,7 @@ import {
   buildWorkloadRebaselineCandidate,
 } from "./activation/rebaseline.js";
 import {
+  readWorkloadRebaselineAcceptanceEvidence,
   readWorkloadRebaselineAcceptanceReview,
   readWorkloadRebaselineCandidateEvidence,
   readWorkloadRebaselineReview,
@@ -104,6 +105,18 @@ import {
   recordRollback,
 } from "./lineage/registry.js";
 import {
+  bindCheckpointToDistributionEpoch,
+  createBaselineLineageRegistry,
+  deriveBaselineLineageState,
+  registerInitialDistributionEpoch,
+  registerRebaselineDistributionEpoch,
+} from "./baseline/registry.js";
+import {
+  createBaselineLineageRegistryFile,
+  mutateBaselineLineageRegistry,
+  readBaselineLineageRegistry,
+} from "./baseline/io.js";
+import {
   createCheckpointLineageRegistryFile,
   mutateCheckpointLineageRegistry,
   parseCandidateReevalEvidence,
@@ -136,6 +149,11 @@ const usage = (): never => {
       "  mso drift-evaluate --activation-policy <limited-active-policy.json> --drift-policy <policy.json> --traces <traces.jsonl> --out <evidence.json>\n" +
       "  mso hold-requalify --registry <registry.json> --activation-policy <held-policy.json> --drift-policy <drift-policy.json> --hold <hold.json> --recovery <recovery.json> --recovery-traces <traces.jsonl> --new-policy-id <id> --out-dir <dir>\n" +
       "  mso rebaseline-plan --registry <registry.json> --activation-policy <held-policy.json> --drift-policy <drift-policy.json> --hold <hold.json> --recovery <recovery.json> --candidate-traces <traces.jsonl> --review <review.json> --new-policy-id <id> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-latency-ratio <n> --out-dir <dir>\n" +
+      "  mso baseline-lineage-init --registry <registry.json> --registry-id <id> --surface <decision-surface>\n" +
+      "  mso baseline-register-initial --registry <baseline-registry.json> --checkpoint-registry <checkpoint-registry.json> --activation-policy <limited-active-policy.json> --drift-policy <drift-policy.json> --epoch-id <id> --distribution-summary <text> --source-evidence-ref <ref> --binding-evidence-ref <ref>\n" +
+      "  mso baseline-register-rebaseline --registry <baseline-registry.json> --checkpoint-registry <checkpoint-registry.json> --acceptance <rebaseline.acceptance.json> --activation-policy <limited-active-policy.json> --drift-policy <drift-policy.json> --epoch-id <id> --binding-evidence-ref <ref>\n" +
+      "  mso baseline-bind-checkpoint --registry <baseline-registry.json> --checkpoint-registry <checkpoint-registry.json> --activation-policy <limited-active-policy.json> --drift-policy <drift-policy.json> --evidence-ref <ref> [--epoch-id <id>]\n" +
+      "  mso baseline-show --registry <baseline-registry.json>\n" +
       "  mso rebaseline-accept --registry <registry.json> --candidate <rebaseline.candidate.json> --canary-1-policy <policy.json> --canary-1-advance <advance.json> --canary-5-policy <policy.json> --canary-5-advance <advance.json> --canary-25-policy <policy.json> --canary-25-advance <advance.json> --review <acceptance-review.json> --limited-active-policy-id <id> --drift-policy-id <id> --window-size <n> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-disagreement <0..1> --max-latency-ratio <n> --max-confidence-delta <0..1> --out-dir <dir>\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
@@ -1048,9 +1066,189 @@ const runRebaselineAccept = async (
   console.log(`out_dir=${outDir}`);
 };
 
+
+const runBaselineLineageInit = async (
+  args: readonly string[],
+): Promise<void> => {
+  const path = requiredOption(args, "--registry");
+  const registry = createBaselineLineageRegistry(
+    requiredOption(args, "--registry-id"),
+    requiredOption(args, "--surface"),
+  );
+  await createBaselineLineageRegistryFile(path, registry);
+  console.log(
+    `registry=${registry.registryId} surface=${registry.decisionSurface} epochs=0`,
+  );
+  console.log(`path=${path}`);
+};
+
+const runBaselineRegisterInitial = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const checkpointRegistry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--checkpoint-registry"),
+  );
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const driftPolicy = await readActiveLimitedDriftPolicy(
+    requiredOption(args, "--drift-policy"),
+  );
+
+  const next = await mutateBaselineLineageRegistry(
+    registryPath,
+    (registry) =>
+      registerInitialDistributionEpoch(
+        registry,
+        checkpointRegistry,
+        activationPolicy,
+        driftPolicy,
+        {
+          epochId: requiredOption(args, "--epoch-id"),
+          distributionSummary: requiredOption(
+            args,
+            "--distribution-summary",
+          ),
+          sourceEvidenceRefs: [
+            requiredOption(args, "--source-evidence-ref"),
+          ],
+          bindingEvidenceRef: requiredOption(
+            args,
+            "--binding-evidence-ref",
+          ),
+        },
+      ),
+  );
+  const state = deriveBaselineLineageState(next);
+  console.log(
+    `epoch=${state.currentEpochId ?? "none"} ordinal=${state.currentEpochId ? state.epochs[state.currentEpochId]?.ordinal ?? "none" : "none"}`,
+  );
+  console.log(
+    `checkpoint=${activationPolicy.candidateCheckpointId} matrix_epochs=${state.checkpointEpochMatrix[activationPolicy.candidateCheckpointId]?.join(",") ?? ""}`,
+  );
+};
+
+const runBaselineRegisterRebaseline = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const checkpointRegistry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--checkpoint-registry"),
+  );
+  const acceptancePath = requiredOption(args, "--acceptance");
+  const acceptance = await readWorkloadRebaselineAcceptanceEvidence(
+    acceptancePath,
+  );
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const driftPolicy = await readActiveLimitedDriftPolicy(
+    requiredOption(args, "--drift-policy"),
+  );
+
+  const next = await mutateBaselineLineageRegistry(
+    registryPath,
+    (registry) =>
+      registerRebaselineDistributionEpoch(
+        registry,
+        checkpointRegistry,
+        acceptance,
+        activationPolicy,
+        driftPolicy,
+        {
+          epochId: requiredOption(args, "--epoch-id"),
+          acceptanceEvidenceRef: acceptancePath,
+          bindingEvidenceRef: requiredOption(
+            args,
+            "--binding-evidence-ref",
+          ),
+        },
+      ),
+  );
+  const state = deriveBaselineLineageState(next);
+  const current = state.currentEpochId
+    ? state.epochs[state.currentEpochId]
+    : undefined;
+  console.log(
+    `epoch=${current?.epochId ?? "none"} ordinal=${current?.ordinal ?? "none"} parent=${current?.parentEpochId ?? "none"} origin=${current?.origin ?? "none"}`,
+  );
+  console.log(
+    `checkpoint=${activationPolicy.candidateCheckpointId} matrix_epochs=${state.checkpointEpochMatrix[activationPolicy.candidateCheckpointId]?.join(",") ?? ""}`,
+  );
+};
+
+const runBaselineBindCheckpoint = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const checkpointRegistry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--checkpoint-registry"),
+  );
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const driftPolicy = await readActiveLimitedDriftPolicy(
+    requiredOption(args, "--drift-policy"),
+  );
+  const epochId = optionValue(args, "--epoch-id");
+  const next = await mutateBaselineLineageRegistry(
+    registryPath,
+    (registry) =>
+      bindCheckpointToDistributionEpoch(
+        registry,
+        checkpointRegistry,
+        activationPolicy,
+        driftPolicy,
+        {
+          ...(epochId ? { epochId } : {}),
+          evidenceRef: requiredOption(args, "--evidence-ref"),
+        },
+      ),
+  );
+  const state = deriveBaselineLineageState(next);
+  console.log(
+    `epoch=${state.currentEpochId ?? "none"} checkpoint=${activationPolicy.candidateCheckpointId} binding_count=${state.currentEpochId ? state.epochs[state.currentEpochId]?.bindingIds.length ?? 0 : 0}`,
+  );
+};
+
+const runBaselineShow = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registry = await readBaselineLineageRegistry(
+    requiredOption(args, "--registry"),
+  );
+  console.log(JSON.stringify(deriveBaselineLineageState(registry), null, 2));
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
+
+  if (command === "baseline-lineage-init") {
+    await runBaselineLineageInit(args);
+    return;
+  }
+
+  if (command === "baseline-register-initial") {
+    await runBaselineRegisterInitial(args);
+    return;
+  }
+
+  if (command === "baseline-register-rebaseline") {
+    await runBaselineRegisterRebaseline(args);
+    return;
+  }
+
+  if (command === "baseline-bind-checkpoint") {
+    await runBaselineBindCheckpoint(args);
+    return;
+  }
+
+  if (command === "baseline-show") {
+    await runBaselineShow(args);
+    return;
+  }
 
   if (command === "lineage-init") {
     await runLineageInit(args);
