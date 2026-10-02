@@ -305,7 +305,40 @@ Monitor:
 - routing distribution,
 - provider errors.
 
-A drift event can return a surface to SHADOW.
+For a Laya limited-active surface, the M1.0 drift guard adds a rolling operational window over completed M0.9 traces.
+
+The accepted canary workload is the baseline. The guard must not invent a global confidence baseline.
+
+A mature window checks:
+
+- candidate provider error rate,
+- incumbent provider error rate,
+- candidate-to-incumbent fallback rate,
+- disagreement rate as a stability signal,
+- p95 candidate/incumbent latency ratio,
+- absolute movement in mean candidate confidence relative to accepted canary evidence.
+
+The rolling window has explicit minimum evidence requirements for candidate-authority requests, comparable questions, and candidate confidence samples.
+
+Before those minimums are satisfied, drift status is BLOCKED and must not trigger a drift HOLD. Immediate provider failure remains the M0.9 circuit-breaker path.
+
+A failed mature window triggers AUTO HOLD:
+
+~~~text
+limited-active candidate authority
+  -> auto_hold
+  -> incumbent-only
+~~~
+
+AUTO HOLD is an authority change inside the activation session. It does not mutate checkpoint lineage and does not automatically roll back a checkpoint.
+
+The authority switch records whether it was triggered as kill or auto_hold. A held session is one-way and must not silently reset itself.
+
+Recovery from AUTO HOLD requires preserving traces, diagnosis, offline replay/re-evaluation as needed, and a new reviewed activation session.
+
+Older canary evidence that lacks candidate confidence telemetry is insufficient for a confidence-drift baseline. Do not synthesize missing confidence values.
+
+A drift event can ultimately return a surface to SHADOW, but M1.0 first removes candidate authority with HOLD so diagnosis can distinguish workload drift from checkpoint failure.
 
 ## 16. Replay
 
@@ -423,12 +456,14 @@ Reliability:
 - timeout_rate
 - fallback_rate
 - kill_switch_activations
+- auto_hold_activations
+- drift_window_failures
 - rollback_count
 
 ## 24. Incident response
 
 ~~~
-1. KILL or BYPASS
+1. KILL, AUTO HOLD, or BYPASS
 2. preserve logs
 3. restore known baseline
 4. identify affected traces

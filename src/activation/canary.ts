@@ -90,6 +90,7 @@ export interface BuildCanaryPolicyOptions {
 
 export interface CanaryKillState {
   killed: boolean;
+  kind?: "kill" | "auto_hold";
   reason?: string;
   killedAt?: string;
 }
@@ -106,6 +107,19 @@ export class CanaryKillSwitch {
     if (!reason.trim()) throw new Error("kill reason must be non-empty");
     this.#state = {
       killed: true,
+      kind: "kill",
+      reason,
+      killedAt: new Date().toISOString(),
+    };
+    return true;
+  }
+
+  hold(reason: string): boolean {
+    if (this.#state.killed) return false;
+    if (!reason.trim()) throw new Error("hold reason must be non-empty");
+    this.#state = {
+      killed: true,
+      kind: "auto_hold",
       reason,
       killedAt: new Date().toISOString(),
     };
@@ -205,12 +219,15 @@ export interface CanaryQuestionComparison {
   type: "choice" | "noul" | "score";
   comparable: boolean;
   agreement?: boolean;
+  incumbentConfidence?: number;
+  candidateConfidence?: number;
 }
 
 export type CanaryFallbackReason =
   | "not_selected"
   | "outside_scope"
   | "kill_switch"
+  | "auto_hold"
   | "candidate_error"
   | "killed_during_request";
 
@@ -245,6 +262,7 @@ export interface CanaryTrace {
   agreements: number;
   disagreements: number;
   agreementRate: number;
+  questions: readonly CanaryQuestionComparison[];
 }
 
 export interface CanaryActivationProviderOptions {
@@ -256,6 +274,7 @@ export interface CanaryActivationProviderOptions {
   sessionId?: string;
   scoreAgreementTolerance?: number;
   onObserverError?: (error: unknown) => void;
+  traceObserver?: (trace: CanaryTrace) => void;
 }
 
 interface ProviderRun {
@@ -581,11 +600,21 @@ const compareQuestion = (
     question.type === "score"
       ? Math.abs(Number(left) - Number(right)) <= scoreTolerance
       : left === right;
+  const incumbentConfidence =
+    incumbent.response.results[questionId]?.confidence;
+  const candidateConfidence =
+    candidate.response.results[questionId]?.confidence;
   return {
     questionId,
     type: question.type,
     comparable: true,
     agreement,
+    ...(incumbentConfidence === undefined
+      ? {}
+      : { incumbentConfidence }),
+    ...(candidateConfidence === undefined
+      ? {}
+      : { candidateConfidence }),
   };
 };
 
@@ -663,6 +692,7 @@ const buildTrace = (
     comparableQuestions: comparable.length,
     agreements,
     disagreements,
+    questions,
     agreementRate:
       comparable.length === 0 ? 0 : agreements / comparable.length,
   };
@@ -679,6 +709,7 @@ export class CanaryActivationProvider implements SystemOneProvider {
   readonly #sessionId: string;
   readonly #scoreAgreementTolerance: number;
   readonly #onObserverError: ((error: unknown) => void) | undefined;
+  readonly #traceObserver: ((trace: CanaryTrace) => void) | undefined;
   readonly #inFlight = new Set<Promise<void>>();
 
   constructor(options: CanaryActivationProviderOptions) {
@@ -712,6 +743,7 @@ export class CanaryActivationProvider implements SystemOneProvider {
       `canary-${new Date().toISOString().replace(/[:.]/g, "-")}`;
     this.#scoreAgreementTolerance = scoreTolerance;
     this.#onObserverError = options.onObserverError;
+    this.#traceObserver = options.traceObserver;
   }
 
   capabilities() {
@@ -757,28 +789,30 @@ export class CanaryActivationProvider implements SystemOneProvider {
       const incumbentPromise = runProvider(this.#incumbent, request);
       const incumbentRun = await incumbentPromise;
       const killAtReturn = this.#killSwitch.snapshot();
+      const trace = buildTrace(request, {
+        sessionId: this.#sessionId,
+        policy: this.#policy,
+        bucket,
+        eligible: scope.eligible,
+        eligibilityReasons: scope.reasons,
+        killSwitchAtStart: killAtStart,
+        killSwitchAtReturn: killAtReturn,
+        circuit: this.#circuit.snapshot(),
+        selectedAuthority: "incumbent",
+        returnedAuthority: "incumbent",
+        fallbackReason: !scope.eligible
+          ? "outside_scope"
+          : killAtStart.killed
+            ? killAtStart.kind === "auto_hold"
+              ? "auto_hold"
+              : "kill_switch"
+            : "not_selected",
+        incumbentRun,
+        scoreAgreementTolerance: this.#scoreAgreementTolerance,
+      });
+      this.#observeTrace(trace);
       const observer = this.#sink
-        .write(
-          buildTrace(request, {
-            sessionId: this.#sessionId,
-            policy: this.#policy,
-            bucket,
-            eligible: scope.eligible,
-            eligibilityReasons: scope.reasons,
-            killSwitchAtStart: killAtStart,
-            killSwitchAtReturn: killAtReturn,
-            circuit: this.#circuit.snapshot(),
-            selectedAuthority: "incumbent",
-            returnedAuthority: "incumbent",
-            fallbackReason: !scope.eligible
-              ? "outside_scope"
-              : killAtStart.killed
-                ? "kill_switch"
-                : "not_selected",
-            incumbentRun,
-            scoreAgreementTolerance: this.#scoreAgreementTolerance,
-          }),
-        )
+        .write(trace)
         .catch((error: unknown) => this.#onObserverError?.(error));
       this.#track(observer);
 
@@ -819,24 +853,24 @@ export class CanaryActivationProvider implements SystemOneProvider {
 
     const observer = Promise.all([incumbentPromise, candidatePromise])
       .then(async ([incumbentRun, completedCandidateRun]) => {
-        await this.#sink.write(
-          buildTrace(request, {
-            sessionId: this.#sessionId,
-            policy: this.#policy,
-            bucket,
-            eligible: scope.eligible,
-            eligibilityReasons: scope.reasons,
-            killSwitchAtStart: killAtStart,
-            killSwitchAtReturn: this.#killSwitch.snapshot(),
-            circuit,
-            selectedAuthority: "candidate",
-            returnedAuthority,
-            ...(fallbackReason ? { fallbackReason } : {}),
-            incumbentRun,
-            candidateRun: completedCandidateRun,
-            scoreAgreementTolerance: this.#scoreAgreementTolerance,
-          }),
-        );
+        const trace = buildTrace(request, {
+          sessionId: this.#sessionId,
+          policy: this.#policy,
+          bucket,
+          eligible: scope.eligible,
+          eligibilityReasons: scope.reasons,
+          killSwitchAtStart: killAtStart,
+          killSwitchAtReturn: this.#killSwitch.snapshot(),
+          circuit,
+          selectedAuthority: "candidate",
+          returnedAuthority,
+          ...(fallbackReason ? { fallbackReason } : {}),
+          incumbentRun,
+          candidateRun: completedCandidateRun,
+          scoreAgreementTolerance: this.#scoreAgreementTolerance,
+        });
+        this.#observeTrace(trace);
+        await this.#sink.write(trace);
       })
       .catch((error: unknown) => this.#onObserverError?.(error));
     this.#track(observer);
@@ -847,6 +881,15 @@ export class CanaryActivationProvider implements SystemOneProvider {
   async flush(): Promise<void> {
     await Promise.all([...this.#inFlight]);
     if (this.#sink.flush) await this.#sink.flush();
+  }
+
+  #observeTrace(trace: CanaryTrace): void {
+    if (!this.#traceObserver) return;
+    try {
+      this.#traceObserver(trace);
+    } catch (error) {
+      this.#onObserverError?.(error);
+    }
   }
 
   #track(task: Promise<void>): void {
@@ -913,6 +956,10 @@ export interface CanarySessionSummary {
   p95CandidateWallLatencyMs: number;
   p95IncumbentWallLatencyMs: number;
   p95LatencyRatio: number;
+  candidateConfidenceSamples: number;
+  meanCandidateConfidence: number;
+  incumbentConfidenceSamples: number;
+  meanIncumbentConfidence: number;
   killTrips: number;
 }
 
@@ -960,6 +1007,16 @@ export const summarizeCanaryTraces = (
     .filter((value): value is number => value !== undefined);
   const p95CandidateWallLatencyMs = percentile(candidateLatencies, 0.95);
   const p95IncumbentWallLatencyMs = percentile(incumbentLatencies, 0.95);
+  const candidateConfidences = traces.flatMap((trace) =>
+    trace.questions
+      .map((question) => question.candidateConfidence)
+      .filter((value): value is number => value !== undefined),
+  );
+  const incumbentConfidences = traces.flatMap((trace) =>
+    trace.questions
+      .map((question) => question.incumbentConfidence)
+      .filter((value): value is number => value !== undefined),
+  );
 
   return {
     schemaVersion: "mso.canary-summary.v0",
@@ -994,6 +1051,18 @@ export const summarizeCanaryTraces = (
       p95IncumbentWallLatencyMs === 0
         ? 0
         : p95CandidateWallLatencyMs / p95IncumbentWallLatencyMs,
+    candidateConfidenceSamples: candidateConfidences.length,
+    meanCandidateConfidence:
+      candidateConfidences.length === 0
+        ? 0
+        : candidateConfidences.reduce((sum, value) => sum + value, 0) /
+          candidateConfidences.length,
+    incumbentConfidenceSamples: incumbentConfidences.length,
+    meanIncumbentConfidence:
+      incumbentConfidences.length === 0
+        ? 0
+        : incumbentConfidences.reduce((sum, value) => sum + value, 0) /
+          incumbentConfidences.length,
     killTrips: traces.some(
       (trace) =>
         !trace.killSwitchAtStart.killed &&

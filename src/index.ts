@@ -23,6 +23,8 @@ export * from "./lineage/io.js";
 export * from "./activation/canary.js";
 export * from "./activation/io.js";
 export * from "./activation/drill.js";
+export * from "./activation/drift.js";
+export * from "./activation/drift_io.js";
 
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";

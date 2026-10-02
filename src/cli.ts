@@ -22,6 +22,15 @@ import {
   writeCanaryRollbackDrill,
 } from "./activation/drill.js";
 import {
+  buildActiveLimitedDriftPolicy,
+  evaluateDriftWindow,
+} from "./activation/drift.js";
+import {
+  readActiveLimitedDriftPolicy,
+  writeActiveLimitedDriftPolicy,
+  writeDriftWindowEvidence,
+} from "./activation/drift_io.js";
+import {
   runComparison,
   writeComparisonEvidence,
 } from "./eval/compare.js";
@@ -105,6 +114,8 @@ const usage = (): never => {
       "  mso canary-plan --registry <registry.json> --policy-id <id> --candidate-provider <id> --incumbent-provider <id> --stage <off|canary_1|canary_5|canary_25|limited_active> --patterns <csv> --max-consecutive-errors <n> --min-error-rate-attempts <n> --max-error-rate <0..1> --out <policy.json>\n" +
       "  mso canary-evaluate --policy <policy.json> --traces <traces.jsonl> --advance-policy <policy.json> --out <advance.json>\n" +
       "  mso canary-drill --registry <registry.json> --out-dir <dir> [--rollback-target <checkpoint-id>]\n" +
+      "  mso drift-plan --activation-policy <limited-active-policy.json> --baseline-policy <canary-policy.json> --baseline-traces <traces.jsonl> --policy-id <id> --window-size <n> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-disagreement <0..1> --max-latency-ratio <n> --max-confidence-delta <0..1> --out <policy.json>\n" +
+      "  mso drift-evaluate --activation-policy <limited-active-policy.json> --drift-policy <policy.json> --traces <traces.jsonl> --out <evidence.json>\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -695,6 +706,102 @@ const runCanaryDrillCli = async (
   }
 };
 
+
+const runDriftPlan = async (args: readonly string[]): Promise<void> => {
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const baselinePolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--baseline-policy"),
+  );
+  const baselineTraces = parseCanaryTraceJsonl(
+    await readFile(requiredOption(args, "--baseline-traces"), "utf8"),
+  );
+  const baselineSummary = summarizeCanaryTraces(
+    baselinePolicy,
+    baselineTraces,
+  );
+  const policy = buildActiveLimitedDriftPolicy(
+    activationPolicy,
+    baselinePolicy,
+    baselineSummary,
+    {
+      policyId: requiredOption(args, "--policy-id"),
+      window: {
+        size: requiredNumberOption(args, "--window-size"),
+        minCandidateSelected: requiredNumberOption(args, "--min-selected"),
+        minComparableQuestions: requiredNumberOption(args, "--min-comparable"),
+        minCandidateConfidenceSamples: requiredNumberOption(
+          args,
+          "--min-confidence-samples",
+        ),
+      },
+      thresholds: {
+        maxCandidateErrorRate: requiredNumberOption(
+          args,
+          "--max-candidate-error",
+        ),
+        maxIncumbentErrorRate: requiredNumberOption(
+          args,
+          "--max-incumbent-error",
+        ),
+        maxFallbackRate: requiredNumberOption(args, "--max-fallback"),
+        maxDisagreementRate: requiredNumberOption(
+          args,
+          "--max-disagreement",
+        ),
+        maxP95LatencyRatio: requiredNumberOption(
+          args,
+          "--max-latency-ratio",
+        ),
+        maxMeanCandidateConfidenceDelta: requiredNumberOption(
+          args,
+          "--max-confidence-delta",
+        ),
+      },
+    },
+  );
+  const outPath = requiredOption(args, "--out");
+  await writeActiveLimitedDriftPolicy(outPath, policy);
+  console.log(
+    `policy=${policy.policyId} activation=${policy.activationPolicyId} baseline=${policy.baseline.sourcePolicyId} window=${policy.window.size}`,
+  );
+  console.log(
+    `automatic_hold=true automatic_rollback=false baseline_confidence=${policy.baseline.meanCandidateConfidence.toFixed(4)}`,
+  );
+  console.log(`out=${outPath}`);
+};
+
+const runDriftEvaluate = async (
+  args: readonly string[],
+): Promise<void> => {
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const driftPolicy = await readActiveLimitedDriftPolicy(
+    requiredOption(args, "--drift-policy"),
+  );
+  const traces = parseCanaryTraceJsonl(
+    await readFile(requiredOption(args, "--traces"), "utf8"),
+  );
+  const evidence = evaluateDriftWindow(
+    driftPolicy,
+    activationPolicy,
+    traces,
+  );
+  const outPath = requiredOption(args, "--out");
+  await writeDriftWindowEvidence(outPath, evidence);
+
+  console.log(
+    `policy=${driftPolicy.policyId} status=${evidence.status} action=${evidence.action} traces=${evidence.traceCount} selected=${evidence.summary.candidateSelected}`,
+  );
+  console.log(
+    `candidate_error_rate=${evidence.summary.candidateErrorRate.toFixed(4)} fallback_rate=${evidence.summary.fallbackRate.toFixed(4)} disagreement_rate=${evidence.disagreementRate.toFixed(4)} confidence_delta=${evidence.confidenceDelta.toFixed(4)}`,
+  );
+  console.log("automatic_rollback=false");
+  console.log(`out=${outPath}`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -746,6 +853,16 @@ const main = async (): Promise<void> => {
 
   if (command === "canary-drill") {
     await runCanaryDrillCli(args);
+    return;
+  }
+
+  if (command === "drift-plan") {
+    await runDriftPlan(args);
+    return;
+  }
+
+  if (command === "drift-evaluate") {
+    await runDriftEvaluate(args);
     return;
   }
 

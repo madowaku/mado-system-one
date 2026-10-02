@@ -23,6 +23,7 @@ Verifier     = prove
 - docs/MADO_LAYA_REEVAL_RUNBOOK.md — checkpoint export → hold-out re-eval → regression slices → Promotion Gate re-entry
 - docs/MADO_LAYA_LINEAGE_RUNBOOK.md — checkpoint ancestry, promotion evidence, rollback safety, and rollback recording
 - docs/MADO_LAYA_CANARY_RUNBOOK.md — staged runtime authority, circuit-breaker fallback, stage evidence, and rollback drill
+- docs/MADO_LAYA_DRIFT_GUARD_RUNBOOK.md — rolling active-limited drift detection and incumbent-only AUTO HOLD
 
 ## v0.3 shape
 
@@ -488,6 +489,70 @@ It injects a candidate failure, verifies incumbent fallback, trips KILL, verifie
 
 limited_active means 100% of the explicitly eligible bounded surface, not global learned authority.
 
+## Active-Limited Drift / Auto-Hold Guard
+
+MSO-LAYA-M1.0 keeps watching a checkpoint after it reaches limited_active.
+
+The guard uses an accepted M0.9 canary workload as its baseline and compares a mature rolling window against explicit per-surface thresholds:
+
+~~~text
+candidate error rate
+incumbent error rate
+fallback rate
+disagreement rate
+p95 latency ratio
+mean candidate confidence delta
+~~~
+
+Build a drift policy from accepted canary evidence:
+
+~~~bash
+npm run mso -- drift-plan \
+  --activation-policy evidence/canary/asset-qa-v2-active.policy.json \
+  --baseline-policy evidence/canary/asset-qa-v2-canary-25.policy.json \
+  --baseline-traces evidence/canary/asset-qa-v2-canary-25.jsonl \
+  --policy-id asset-qa-v2-active-drift \
+  --window-size 200 \
+  --min-selected 100 \
+  --min-comparable 100 \
+  --min-confidence-samples 100 \
+  --max-candidate-error 0.02 \
+  --max-incumbent-error 0.02 \
+  --max-fallback 0.02 \
+  --max-disagreement 0.08 \
+  --max-latency-ratio 2 \
+  --max-confidence-delta 0.15 \
+  --out evidence/drift/asset-qa-v2.policy.json
+~~~
+
+The live guard shares the M0.9 authority switch with CanaryActivationProvider and observes completed traces through traceObserver. Before minimum evidence exists, drift status is blocked rather than actionable. Severe direct provider faults remain the M0.9 circuit breaker's job.
+
+When a mature window fails a drift check, the guard performs AUTO HOLD:
+
+~~~text
+candidate authority
+      ↓
+AUTO HOLD
+      ↓
+incumbent-only
+~~~
+
+AUTO HOLD records kind=auto_hold and fallbackReason=auto_hold. It does not mutate checkpoint lineage, revoke promotion, or execute rollback.
+
+Canary comparisons now carry candidate/incumbent confidence samples, and session summaries expose mean confidence so M1.0 can detect both confidence collapse and unexpected over-confidence relative to the accepted workload.
+
+Offline replay uses the same evaluator:
+
+~~~bash
+npm run mso -- drift-evaluate \
+  --activation-policy evidence/canary/asset-qa-v2-active.policy.json \
+  --drift-policy evidence/drift/asset-qa-v2.policy.json \
+  --traces evidence/canary/asset-qa-v2-active.jsonl \
+  --out evidence/drift/asset-qa-v2.window.json
+~~~
+
+Every drift artifact keeps automaticHold=true and automaticRollback=false. Recovery requires diagnosis and a new reviewed activation session rather than silently clearing the old hold.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -512,7 +577,8 @@ limited_active means 100% of the explicitly eligible bounded surface, not global
 - **MSO-LAYA-M0.7** Candidate Re-eval Loop ✅
 - **MSO-LAYA-M0.8** Checkpoint Lineage / Rollback Registry ✅
 - **MSO-LAYA-M0.9** Canary Activation / Rollback Drill ✅
-- **MSO-LAYA-M1.0** Active-Limited Drift / Auto-Hold Guard
+- **MSO-LAYA-M1.0** Active-Limited Drift / Auto-Hold Guard ✅
+- **MSO-LAYA-M1.1** Hold Recovery / Requalification Gate
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
