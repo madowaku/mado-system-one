@@ -338,7 +338,9 @@ test("session summary and stage gate hold on operational regression", async () =
   const summary = summarizeCanaryTraces(currentPolicy, sink.records);
   const advance = evaluateCanaryAdvance(summary, {
     minCandidateSelected: 3,
+    minComparableQuestions: 2,
     maxCandidateErrorRate: 0,
+    maxIncumbentErrorRate: 0,
     maxFallbackRate: 0,
     maxDisagreementRate: 0.25,
   });
