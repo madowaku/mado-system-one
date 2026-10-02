@@ -388,3 +388,109 @@ test("rollback plan becomes stale after any registry event", () => {
     /plan is stale/,
   );
 });
+
+
+test("rollback safety can be attested and later revoked", () => {
+  let registry = seededRegistry();
+  registry = appendLineageEvent(registry, {
+    type: "rollback_safety_set",
+    data: {
+      checkpointId: "candidate",
+      eligible: true,
+      evidenceRef: "ops-approval:candidate:v2",
+      reason: "shadow and holdout accepted",
+    },
+  });
+
+  let state = deriveLineageState(registry);
+  assert.equal(state.checkpoints.candidate?.knownGood, true);
+  assert.equal(
+    state.checkpoints.candidate?.knownGoodEvidenceRef,
+    "ops-approval:candidate:v2",
+  );
+
+  registry = appendLineageEvent(registry, {
+    type: "rollback_safety_set",
+    data: {
+      checkpointId: "candidate",
+      eligible: false,
+      evidenceRef: "incident:regression-77",
+      reason: "rollback target revoked after incident",
+    },
+  });
+
+  state = deriveLineageState(registry);
+  assert.equal(state.checkpoints.candidate?.knownGood, false);
+  assert.equal(
+    state.checkpoints.candidate?.knownGoodEvidenceRef,
+    "incident:regression-77",
+  );
+});
+
+test("promotion refuses a stale candidate branch once a newer head exists", () => {
+  let registry = seededRegistry();
+  registry = appendLineageEvent(registry, {
+    type: "promotion_recorded",
+    data: {
+      checkpointId: "candidate",
+      gateId: "gate-v2",
+      gateEvidenceRef: "promotion/gate-v2.json",
+      reevalId: "reeval-v2",
+      reevalEvidenceRef: "reeval/summary.json",
+      rollbackTargetId: "base",
+    },
+  });
+
+  registry = appendLineageEvent(registry, {
+    type: "checkpoint_registered",
+    data: {
+      checkpointId: "stale-sibling",
+      checkpoint: checkpoint("stale-sibling", "f".repeat(64)),
+      origin: "fine_tune",
+      knownGood: false,
+      parentCheckpointId: "base",
+      reevalEvidenceRef: "reeval/stale.json",
+      reevalId: "reeval-stale",
+    },
+  });
+
+  assert.throws(
+    () =>
+      appendLineageEvent(registry, {
+        type: "promotion_recorded",
+        data: {
+          checkpointId: "stale-sibling",
+          gateId: "gate-stale",
+          gateEvidenceRef: "promotion/gate-stale.json",
+          reevalId: "reeval-stale",
+          reevalEvidenceRef: "reeval/stale.json",
+          rollbackTargetId: "base",
+        },
+      }),
+    /does not match recorded head/,
+  );
+});
+
+test("rollback source assertion must match recorded head", () => {
+  let registry = seededRegistry();
+  registry = appendLineageEvent(registry, {
+    type: "promotion_recorded",
+    data: {
+      checkpointId: "candidate",
+      gateId: "gate-v2",
+      gateEvidenceRef: "promotion/gate-v2.json",
+      reevalId: "reeval-v2",
+      reevalEvidenceRef: "reeval/summary.json",
+      rollbackTargetId: "base",
+    },
+  });
+
+  assert.throws(
+    () =>
+      planRollback(registry, "base", {
+        fromCheckpointId: "base",
+        reason: "wrong operator assumption",
+      }),
+    /does not match recorded head/,
+  );
+});
