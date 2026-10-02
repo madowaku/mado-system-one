@@ -446,14 +446,17 @@ export const evaluateDriftWindow = (
       ? "fail"
       : "pass";
 
+  const firstTrace = eligible[0];
+  const lastTrace = eligible[eligible.length - 1];
+
   return {
     schemaVersion: "mso.drift-window.v0",
     policyId: driftPolicy.policyId,
     activationPolicyId: activationPolicy.policyId,
     evaluatedAt: now.toISOString(),
     traceCount: eligible.length,
-    ...(eligible[0] ? { firstTraceId: eligible[0].traceId } : {}),
-    ...(eligible.at(-1) ? { lastTraceId: eligible.at(-1)?.traceId } : {}),
+    ...(firstTrace ? { firstTraceId: firstTrace.traceId } : {}),
+    ...(lastTrace ? { lastTraceId: lastTrace.traceId } : {}),
     status,
     action:
       status === "fail"
