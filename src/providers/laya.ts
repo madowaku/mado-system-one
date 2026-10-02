@@ -350,6 +350,7 @@ export class LayaSystemOneProvider implements SystemOneProvider {
 }
 
 export interface LayaTsRouterOptions {
+  id?: string;
   model?: string;
   language?: string;
   minConfidence?: number;
@@ -386,10 +387,43 @@ export const createLayaTsProvider = async (
 
   return new LayaSystemOneProvider({
     runner,
+    ...(options.id ? { id: options.id } : {}),
     ...(options.model ? { model: options.model } : {}),
     ...(options.language ? { language: options.language } : {}),
     ...(options.minConfidence === undefined
       ? {}
       : { minConfidence: options.minConfidence }),
+  });
+};
+
+
+export interface LayaCheckpointProviderOptions {
+  id: string;
+  checkpointDir: string;
+  model?: "english" | "multilingual" | "typed-decisions";
+  language?: string;
+  minConfidence?: number;
+  device?: string;
+}
+
+export const createLayaCheckpointProvider = async (
+  options: LayaCheckpointProviderOptions,
+): Promise<LayaSystemOneProvider> => {
+  const model = options.model ?? "english";
+  return createLayaTsProvider({
+    id: options.id,
+    model,
+    ...(options.language ? { language: options.language } : {}),
+    ...(options.minConfidence === undefined
+      ? {}
+      : { minConfidence: options.minConfidence }),
+    routerOptions: {
+      models: {
+        [model]: options.checkpointDir,
+      },
+      default: model,
+      maxLoaded: 1,
+      ...(options.device ? { device: options.device } : {}),
+    },
   });
 };
