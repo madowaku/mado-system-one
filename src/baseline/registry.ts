@@ -609,7 +609,7 @@ export const registerInitialDistributionEpoch = (
         ),
       },
     },
-    { now: options.now },
+    { ...(options.now ? { now: options.now } : {}) },
   );
   next = appendBaselineLineageEvent(
     next,
@@ -625,7 +625,7 @@ export const registerInitialDistributionEpoch = (
         options.bindingId ?? `binding-${options.epochId}-${activationPolicy.policyId}`,
       ),
     },
-    { now: options.now },
+    { ...(options.now ? { now: options.now } : {}) },
   );
   return next;
 };
@@ -708,7 +708,7 @@ export const registerRebaselineDistributionEpoch = (
         rebaselineId: acceptance.rebaselineId,
       },
     },
-    { now: options.now },
+    { ...(options.now ? { now: options.now } : {}) },
   );
   next = appendBaselineLineageEvent(
     next,
@@ -724,7 +724,7 @@ export const registerRebaselineDistributionEpoch = (
         options.bindingId ?? `binding-${options.epochId}-${activationPolicy.policyId}`,
       ),
     },
-    { now: options.now },
+    { ...(options.now ? { now: options.now } : {}) },
   );
   return next;
 };
@@ -767,6 +767,6 @@ export const bindCheckpointToDistributionEpoch = (
   return appendBaselineLineageEvent(
     registry,
     { type: "checkpoint_binding_recorded", data: payload },
-    { now: options.now },
+    { ...(options.now ? { now: options.now } : {}) },
   );
 };
