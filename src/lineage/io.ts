@@ -45,6 +45,10 @@ export const parseRollbackPlan = (value: unknown): RollbackPlan => {
   nonEmptyString(value.toCheckpointId, "rollback plan toCheckpointId");
   nonEmptyString(value.reason, "rollback plan reason");
   nonEmptyString(value.targetFingerprint, "rollback plan targetFingerprint");
+  nonEmptyString(
+    value.targetKnownGoodEvidenceRef,
+    "rollback plan targetKnownGoodEvidenceRef",
+  );
   if (!Array.isArray(value.path) || value.path.length < 2) {
     throw new Error("rollback plan path must contain source and target");
   }
@@ -154,5 +158,28 @@ export const mutateCheckpointLineageRegistry = async (
   } finally {
     await lock.close();
     await unlink(lockPath).catch(() => undefined);
+  }
+};
+
+
+export const createCheckpointLineageRegistryFile = async (
+  path: string,
+  registry: CheckpointLineageRegistry,
+): Promise<void> => {
+  verifyLineageRegistry(registry);
+  await mkdir(dirname(path), { recursive: true });
+  let handle;
+  try {
+    handle = await open(path, "wx");
+  } catch (error) {
+    throw new Error(
+      `checkpoint lineage registry already exists or cannot be created: ${path}`,
+      { cause: error },
+    );
+  }
+  try {
+    await handle.writeFile(`${JSON.stringify(registry, null, 2)}\n`, "utf8");
+  } finally {
+    await handle.close();
   }
 };
