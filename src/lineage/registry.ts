@@ -7,6 +7,7 @@ export type CheckpointOrigin = "base" | "fine_tune" | "imported";
 export type CheckpointLifecycle =
   | "registered"
   | "promoted"
+  | "restored"
   | "superseded"
   | "rolled_back";
 
@@ -315,7 +316,10 @@ const applyPromotion = (
     recordedHeadCheckpointId !== payload.checkpointId
   ) {
     const previous = checkpoints[recordedHeadCheckpointId];
-    if (previous?.lifecycle === "promoted") {
+    if (
+      previous?.lifecycle === "promoted" ||
+      previous?.lifecycle === "restored"
+    ) {
       checkpoints[recordedHeadCheckpointId] = {
         ...previous,
         lifecycle: "superseded",
@@ -371,8 +375,7 @@ const applyRollback = (
   };
   checkpoints[payload.toCheckpointId] = {
     ...to,
-    lifecycle: "promoted",
-    promotionCount: to.promotionCount + 1,
+    lifecycle: "restored",
   };
   return payload.toCheckpointId;
 };
