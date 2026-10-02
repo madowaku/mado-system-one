@@ -319,7 +319,10 @@ For Laya fine-tune candidate packs:
 - target argmax must agree with the reviewed label before training eligibility,
 - train/validation splitting is grouped by case identity to prevent state leakage,
 - validation evidence remains untouched by training and calibration,
-- a fine-tuned checkpoint re-enters evaluation as a new candidate and inherits no promotion status.
+- a fine-tuned checkpoint re-enters evaluation as a new candidate and inherits no promotion status,
+- the exact base and candidate checkpoint artifacts are fingerprinted before re-evaluation,
+- post-training evaluation uses an untouched holdout and reports slice regressions, not only aggregate gains,
+- a candidate eval artifact may re-enter Promotion Gate only under a candidate-specific policy identity.
 
 ## 19. LOCALIZED stack
 
