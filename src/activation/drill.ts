@@ -175,7 +175,9 @@ export const runCanaryRollbackDrill = async (
   const summary = summarizeCanaryTraces(policy, sink.records);
   const advance = evaluateCanaryAdvance(summary, {
     minCandidateSelected: 3,
+    minComparableQuestions: 2,
     maxCandidateErrorRate: 0,
+    maxIncumbentErrorRate: 0,
     maxFallbackRate: 0,
     maxDisagreementRate: 1,
   });
