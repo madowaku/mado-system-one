@@ -16,6 +16,7 @@ export interface CheckpointRegisteredPayload {
   checkpoint: LayaCheckpointFingerprint;
   origin: CheckpointOrigin;
   knownGood: boolean;
+  knownGoodEvidenceRef?: string;
   parentCheckpointId?: string;
   fineTunePackRef?: string;
   reevalEvidenceRef?: string;
@@ -76,6 +77,7 @@ export interface DerivedCheckpoint {
   checkpoint: LayaCheckpointFingerprint;
   origin: CheckpointOrigin;
   knownGood: boolean;
+  knownGoodEvidenceRef?: string;
   parentCheckpointId?: string;
   childCheckpointIds: readonly string[];
   lifecycle: CheckpointLifecycle;
@@ -110,6 +112,7 @@ export interface RollbackPlan {
   targetFingerprint: string;
   targetRef: string;
   targetKnownGood: true;
+  targetKnownGoodEvidenceRef: string;
   automaticExecution: false;
   runtimeAuthorityChanged: false;
   requiredAction:
@@ -148,6 +151,9 @@ const checkpointFromRegistration = (
   checkpoint: payload.checkpoint,
   origin: payload.origin,
   knownGood: payload.knownGood,
+  ...(payload.knownGoodEvidenceRef
+    ? { knownGoodEvidenceRef: payload.knownGoodEvidenceRef }
+    : {}),
   ...(payload.parentCheckpointId
     ? { parentCheckpointId: payload.parentCheckpointId }
     : {}),
@@ -256,6 +262,9 @@ const applyRegistration = (
   }
   if (payload.origin === "fine_tune" && !payload.parentCheckpointId) {
     throw new Error("fine_tune checkpoint requires parentCheckpointId");
+  }
+  if (payload.knownGood && !payload.knownGoodEvidenceRef) {
+    throw new Error("knownGood checkpoint requires knownGoodEvidenceRef");
   }
   if (payload.knownGood && payload.origin === "fine_tune" && !payload.reevalId) {
     throw new Error(
@@ -556,6 +565,11 @@ export const planRollback = (
     targetFingerprint: target.checkpoint.fingerprint,
     targetRef: target.checkpoint.ref,
     targetKnownGood: true,
+    targetKnownGoodEvidenceRef:
+      target.knownGoodEvidenceRef ??
+      (() => {
+        throw new Error("known-good target is missing evidence reference");
+      })(),
     automaticExecution: false,
     runtimeAuthorityChanged: false,
     requiredAction:
