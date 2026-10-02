@@ -153,6 +153,7 @@ const seededRegistry = () => {
         checkpoint: base,
         origin: "base",
         knownGood: true,
+        knownGoodEvidenceRef: "baseline-approval:asset.qa:v1",
       },
     },
     {
@@ -244,6 +245,10 @@ test("hash chain detects event tampering", () => {
   const registry = seededRegistry();
   const first = registry.events[0];
   assert.ok(first);
+  assert.equal(first.payload.type, "checkpoint_registered");
+  if (first.payload.type !== "checkpoint_registered") {
+    throw new Error("expected registration event");
+  }
   const tampered = {
     ...registry,
     events: [
@@ -326,6 +331,7 @@ test("rollback target must be a known-good ancestor", () => {
       checkpoint: checkpoint("other", "d".repeat(64)),
       origin: "imported",
       knownGood: true,
+      knownGoodEvidenceRef: "baseline-approval:other-root",
     },
   });
   registry = appendLineageEvent(registry, {
