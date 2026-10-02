@@ -30,6 +30,12 @@ import {
   writeActiveLimitedDriftPolicy,
   writeDriftWindowEvidence,
 } from "./activation/drift_io.js";
+import { evaluateHoldRequalification } from "./activation/recovery.js";
+import {
+  readDriftHoldEvent,
+  readHoldRecoveryCase,
+  writeHoldRequalificationResult,
+} from "./activation/recovery_io.js";
 import {
   runComparison,
   writeComparisonEvidence,
@@ -116,6 +122,7 @@ const usage = (): never => {
       "  mso canary-drill --registry <registry.json> --out-dir <dir> [--rollback-target <checkpoint-id>]\n" +
       "  mso drift-plan --activation-policy <limited-active-policy.json> --baseline-policy <canary-policy.json> --baseline-traces <traces.jsonl> --policy-id <id> --window-size <n> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-disagreement <0..1> --max-latency-ratio <n> --max-confidence-delta <0..1> --out <policy.json>\n" +
       "  mso drift-evaluate --activation-policy <limited-active-policy.json> --drift-policy <policy.json> --traces <traces.jsonl> --out <evidence.json>\n" +
+      "  mso hold-requalify --registry <registry.json> --activation-policy <held-policy.json> --drift-policy <drift-policy.json> --hold <hold.json> --recovery <recovery.json> --recovery-traces <traces.jsonl> --new-policy-id <id> --out-dir <dir>\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -802,6 +809,61 @@ const runDriftEvaluate = async (
   console.log(`out=${outPath}`);
 };
 
+
+const runHoldRequalify = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--registry"),
+  );
+  const activationPolicy = await readCanaryActivationPolicy(
+    requiredOption(args, "--activation-policy"),
+  );
+  const driftPolicy = await readActiveLimitedDriftPolicy(
+    requiredOption(args, "--drift-policy"),
+  );
+  const hold = await readDriftHoldEvent(
+    requiredOption(args, "--hold"),
+  );
+  const recovery = await readHoldRecoveryCase(
+    requiredOption(args, "--recovery"),
+  );
+  const recoveryTraces = parseCanaryTraceJsonl(
+    await readFile(requiredOption(args, "--recovery-traces"), "utf8"),
+  );
+  const recoveryWindow = evaluateDriftWindow(
+    driftPolicy,
+    activationPolicy,
+    recoveryTraces,
+  );
+  const result = evaluateHoldRequalification(
+    registry,
+    activationPolicy,
+    driftPolicy,
+    hold,
+    recovery,
+    recoveryWindow,
+    {
+      newActivationPolicyId: requiredOption(args, "--new-policy-id"),
+    },
+  );
+  const outDir = requiredOption(args, "--out-dir");
+  await writeHoldRequalificationResult(outDir, result);
+
+  console.log(
+    `requalification=${result.evidence.requalificationId} classification=${result.evidence.classification} status=${result.evidence.status} action=${result.evidence.action}`,
+  );
+  console.log(
+    `automatic_reactivation=false automatic_rollback=false old_session_reusable=false`,
+  );
+  if (result.restartPolicy) {
+    console.log(
+      `restart_policy=${result.restartPolicy.policyId} stage=${result.restartPolicy.stage} traffic=${result.restartPolicy.trafficFraction}`,
+    );
+  }
+  console.log(`out_dir=${outDir}`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -863,6 +925,11 @@ const main = async (): Promise<void> => {
 
   if (command === "drift-evaluate") {
     await runDriftEvaluate(args);
+    return;
+  }
+
+  if (command === "hold-requalify") {
+    await runHoldRequalify(args);
     return;
   }
 
