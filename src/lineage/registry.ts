@@ -32,6 +32,13 @@ export interface PromotionRecordedPayload {
   rollbackTargetId: string;
 }
 
+export interface RollbackSafetySetPayload {
+  checkpointId: string;
+  eligible: boolean;
+  evidenceRef: string;
+  reason: string;
+}
+
 export interface RollbackRecordedPayload {
   planId: string;
   fromCheckpointId: string;
@@ -48,6 +55,10 @@ export type LineageEventPayload =
   | {
       type: "promotion_recorded";
       data: PromotionRecordedPayload;
+    }
+  | {
+      type: "rollback_safety_set";
+      data: RollbackSafetySetPayload;
     }
   | {
       type: "rollback_recorded";
@@ -263,8 +274,11 @@ const applyRegistration = (
   if (payload.origin === "fine_tune" && !payload.parentCheckpointId) {
     throw new Error("fine_tune checkpoint requires parentCheckpointId");
   }
-  if (payload.knownGood && !payload.knownGoodEvidenceRef) {
-    throw new Error("knownGood checkpoint requires knownGoodEvidenceRef");
+  if (payload.knownGood) {
+    nonEmpty(
+      payload.knownGoodEvidenceRef ?? "",
+      "knownGood checkpoint knownGoodEvidenceRef",
+    );
   }
   if (payload.knownGood && payload.origin === "fine_tune" && !payload.reevalId) {
     throw new Error(
@@ -285,6 +299,26 @@ const applyRegistration = (
       };
     }
   }
+};
+
+
+const applyRollbackSafety = (
+  checkpoints: Record<string, DerivedCheckpoint>,
+  payload: RollbackSafetySetPayload,
+): void => {
+  const checkpoint = checkpoints[payload.checkpointId];
+  if (!checkpoint) {
+    throw new Error(
+      `rollback safety checkpoint is not registered: ${payload.checkpointId}`,
+    );
+  }
+  nonEmpty(payload.evidenceRef, "rollback safety evidenceRef");
+  nonEmpty(payload.reason, "rollback safety reason");
+  checkpoints[payload.checkpointId] = {
+    ...checkpoint,
+    knownGood: payload.eligible,
+    knownGoodEvidenceRef: payload.evidenceRef,
+  };
 };
 
 const applyPromotion = (
@@ -406,6 +440,9 @@ export const deriveLineageState = (
           event.payload.data,
           recordedHeadCheckpointId,
         );
+        break;
+      case "rollback_safety_set":
+        applyRollbackSafety(checkpoints, event.payload.data);
         break;
       case "rollback_recorded":
         recordedHeadCheckpointId = applyRollback(
