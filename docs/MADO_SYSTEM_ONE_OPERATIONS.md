@@ -97,6 +97,23 @@ Good examples:
 
 Do not begin with payment, deletion, permission change, or publication.
 
+For learned-provider canary activation, M0.9 narrows ACTIVE_LIMITED further:
+
+- rollout stages are off -> 1% -> 5% -> 25% -> limited active,
+- stage assignment is deterministic per policy and trace,
+- every canary policy is pinned to the current checkpoint lineage head hash,
+- any lineage mutation invalidates the old activation policy,
+- request metadata must explicitly attest matching decision surface, canary eligibility, reversibility, and low impact,
+- payment, purchase, delete, publish, permission-change, secret-exposure, external-share, and account-change risk tags are excluded,
+- selected canary traffic runs incumbent in parallel as observer and fallback,
+- candidate provider failure falls back to incumbent,
+- a one-way circuit breaker can KILL candidate authority for the activation session,
+- stage advancement is evidence-only and never automatic,
+- a kill-switch trip prevents stage advancement,
+- stage evidence must include enough candidate requests and comparable questions, candidate and incumbent reliability, fallback rate, disagreement, and optional latency budget.
+
+limited_active means all explicitly eligible traffic on one bounded surface. It does not imply global provider authority.
+
 ## 6. ACTIVE
 
 System One can influence normal reversible workflow control.
@@ -448,6 +465,16 @@ Test:
 - human confirmation path.
 
 Operational safety should be tested as deliberately as model quality.
+
+For canary rollout, the mandatory rollback drill injects a synthetic candidate failure and verifies:
+
+- candidate failure returns the incumbent,
+- the circuit breaker trips KILL,
+- later requests stay incumbent-only,
+- the stage gate holds instead of advancing,
+- a rollback plan targets a known-good lineage ancestor,
+- simulated rollback restores the cloned registry only,
+- production registry and external runtime authority remain unchanged by the drill.
 
 ## 26. North Star
 

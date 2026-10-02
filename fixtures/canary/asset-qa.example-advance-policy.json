@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "mso.canary-advance-policy.v0",
+  "minCandidateSelected": 100,
+  "minComparableQuestions": 100,
+  "maxCandidateErrorRate": 0.01,
+  "maxIncumbentErrorRate": 0.01,
+  "maxFallbackRate": 0.01,
+  "maxDisagreementRate": 0.05,
+  "maxP95LatencyRatio": 2
+}

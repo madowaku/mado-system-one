@@ -22,6 +22,7 @@ Verifier     = prove
 - docs/MADO_LAYA_FINETUNE_RUNBOOK.md — reviewed disagreement → soft-target candidate pack → held-out validation loop
 - docs/MADO_LAYA_REEVAL_RUNBOOK.md — checkpoint export → hold-out re-eval → regression slices → Promotion Gate re-entry
 - docs/MADO_LAYA_LINEAGE_RUNBOOK.md — checkpoint ancestry, promotion evidence, rollback safety, and rollback recording
+- docs/MADO_LAYA_CANARY_RUNBOOK.md — staged runtime authority, circuit-breaker fallback, stage evidence, and rollback drill
 
 ## v0.3 shape
 
@@ -417,6 +418,76 @@ The ledger protects common local races with an exclusive writer lock and atomic 
 
 Lifecycle state distinguishes `promoted` from `restored`, so incident recovery is not misreported as a fresh promotion.
 
+## Canary Activation / Rollback Drill
+
+MSO-LAYA-M0.9 turns a promoted lineage head into bounded runtime authority gradually:
+
+~~~text
+off
+ -> canary_1
+ -> canary_5
+ -> canary_25
+ -> limited_active
+~~~
+
+Traffic assignment is deterministic from policy id + trace id. The same request does not bounce randomly between providers during retry/replay.
+
+A candidate can receive authority only when the request is explicitly marked for the matching decision surface and attests:
+
+~~~text
+canaryEligible = true
+reversible     = true
+impactClass    = low
+~~~
+
+Consequential risk tags such as payment, delete, publish, permission change, secret exposure, external sharing, or account change keep the request on the incumbent.
+
+Build a lineage-pinned plan:
+
+~~~bash
+npm run mso -- canary-plan \
+  --registry evidence/lineage/asset-qa.json \
+  --policy-id asset-qa-v2-canary-1 \
+  --candidate-provider laya-candidate-v2 \
+  --incumbent-provider current-incumbent \
+  --stage canary_1 \
+  --patterns gate,score \
+  --max-consecutive-errors 2 \
+  --min-error-rate-attempts 20 \
+  --max-error-rate 0.05 \
+  --out evidence/canary/asset-qa-v2-canary-1.policy.json
+~~~
+
+The policy pins the exact candidate checkpoint fingerprint, promotion gate, rollback target, and M0.8 lineage head hash. Any later registry mutation makes the old policy stale.
+
+For selected traffic, candidate and incumbent run concurrently. A successful candidate can return authority while the incumbent remains observer/fallback. Candidate failure returns the already-running incumbent and feeds a one-way circuit breaker. Once KILL trips, later requests are incumbent-only.
+
+Canary traces keep live labels unknown and record route bucket, eligibility, returned authority, fallback, provider errors, comparison coverage, disagreement, and kill state.
+
+Stage advancement is evidence-only:
+
+~~~bash
+npm run mso -- canary-evaluate \
+  --policy evidence/canary/asset-qa-v2-canary-1.policy.json \
+  --traces evidence/canary/asset-qa-v2-canary-1.jsonl \
+  --advance-policy fixtures/canary/asset-qa.example-advance-policy.json \
+  --out evidence/canary/asset-qa-v2-canary-1.advance.json
+~~~
+
+The stage gate requires enough candidate traffic and comparable questions, healthy candidate and incumbent error rates, bounded fallback/disagreement, optional latency budget, and zero kill-switch trips. It always records automaticStageAdvance=false.
+
+The synthetic escape-hatch drill is:
+
+~~~bash
+npm run mso -- canary-drill \
+  --registry evidence/lineage/asset-qa.json \
+  --out-dir evidence/drills/asset-qa-v2
+~~~
+
+It injects a candidate failure, verifies incumbent fallback, trips KILL, verifies later incumbent-only routing, blocks stage advance, creates a rollback plan, and records a simulated rollback only in a cloned registry. The production registry and external runtime authority are not mutated by the drill.
+
+limited_active means 100% of the explicitly eligible bounded surface, not global learned authority.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -440,7 +511,8 @@ Lifecycle state distinguishes `promoted` from `restored`, so incident recovery i
 - **MSO-LAYA-M0.6** Fine-tune Candidate ✅
 - **MSO-LAYA-M0.7** Candidate Re-eval Loop ✅
 - **MSO-LAYA-M0.8** Checkpoint Lineage / Rollback Registry ✅
-- **MSO-LAYA-M0.9** Canary Activation / Rollback Drill
+- **MSO-LAYA-M0.9** Canary Activation / Rollback Drill ✅
+- **MSO-LAYA-M1.0** Active-Limited Drift / Auto-Hold Guard
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

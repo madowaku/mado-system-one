@@ -2,6 +2,25 @@
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import type { SystemOneProvider } from "./core/provider.js";
+import type { SystemOnePattern } from "./core/types.js";
+import {
+  assertCanaryPolicyAgainstRegistry,
+  buildCanaryActivationPolicy,
+  evaluateCanaryAdvance,
+  summarizeCanaryTraces,
+  type CanaryStage,
+} from "./activation/canary.js";
+import {
+  parseCanaryAdvancePolicy,
+  parseCanaryTraceJsonl,
+  readCanaryActivationPolicy,
+  writeCanaryActivationPolicy,
+  writeCanaryAdvanceEvidence,
+} from "./activation/io.js";
+import {
+  runCanaryRollbackDrill,
+  writeCanaryRollbackDrill,
+} from "./activation/drill.js";
 import {
   runComparison,
   writeComparisonEvidence,
@@ -83,6 +102,9 @@ const usage = (): never => {
       "  mso rollback-plan --registry <registry.json> --to <checkpoint-id> --reason <text> --out <plan.json> [--from <checkpoint-id>]\n" +
       "  mso lineage-record-rollback --registry <registry.json> --plan <plan.json> --execution-ref <ref>\n" +
       "  mso lineage-show --registry <registry.json>\n" +
+      "  mso canary-plan --registry <registry.json> --policy-id <id> --candidate-provider <id> --incumbent-provider <id> --stage <off|canary_1|canary_5|canary_25|limited_active> --patterns <csv> --max-consecutive-errors <n> --min-error-rate-attempts <n> --max-error-rate <0..1> --out <policy.json>\n" +
+      "  mso canary-evaluate --policy <policy.json> --traces <traces.jsonl> --advance-policy <policy.json> --out <advance.json>\n" +
+      "  mso canary-drill --registry <registry.json> --out-dir <dir> [--rollback-target <checkpoint-id>]\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
@@ -522,6 +544,157 @@ const runLineageShow = async (args: readonly string[]): Promise<void> => {
   console.log(JSON.stringify(deriveLineageState(registry), null, 2));
 };
 
+
+const requiredNumberOption = (
+  args: readonly string[],
+  name: string,
+): number => {
+  const value = Number(requiredOption(args, name));
+  if (!Number.isFinite(value)) throw new Error(`${name} must be numeric`);
+  return value;
+};
+
+const canaryStageOption = (
+  args: readonly string[],
+): CanaryStage => {
+  const value = requiredOption(args, "--stage");
+  if (
+    value !== "off" &&
+    value !== "canary_1" &&
+    value !== "canary_5" &&
+    value !== "canary_25" &&
+    value !== "limited_active"
+  ) {
+    throw new Error(
+      "--stage must be off|canary_1|canary_5|canary_25|limited_active",
+    );
+  }
+  return value;
+};
+
+const canaryPatternsOption = (
+  args: readonly string[],
+): SystemOnePattern[] => {
+  const allowed = new Set<SystemOnePattern>([
+    "route",
+    "compute",
+    "rank",
+    "gate",
+    "act",
+    "score",
+    "abstain",
+    "sieve",
+    "walk",
+    "verify",
+  ]);
+  const values = requiredOption(args, "--patterns")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (values.length === 0) throw new Error("--patterns must be non-empty");
+  for (const value of values) {
+    if (!allowed.has(value as SystemOnePattern)) {
+      throw new Error(`unsupported canary pattern: ${value}`);
+    }
+  }
+  return values as SystemOnePattern[];
+};
+
+const runCanaryPlan = async (args: readonly string[]): Promise<void> => {
+  const registryPath = requiredOption(args, "--registry");
+  const outPath = requiredOption(args, "--out");
+  const registry = await readCheckpointLineageRegistry(registryPath);
+  const policy = buildCanaryActivationPolicy(registry, {
+    policyId: requiredOption(args, "--policy-id"),
+    candidateProviderId: requiredOption(args, "--candidate-provider"),
+    incumbentProviderId: requiredOption(args, "--incumbent-provider"),
+    stage: canaryStageOption(args),
+    allowedPatterns: canaryPatternsOption(args),
+    circuitBreaker: {
+      maxConsecutiveCandidateErrors: requiredNumberOption(
+        args,
+        "--max-consecutive-errors",
+      ),
+      minCandidateAttemptsForErrorRate: requiredNumberOption(
+        args,
+        "--min-error-rate-attempts",
+      ),
+      maxCandidateErrorRate: requiredNumberOption(
+        args,
+        "--max-error-rate",
+      ),
+    },
+  });
+  assertCanaryPolicyAgainstRegistry(registry, policy);
+  await writeCanaryActivationPolicy(outPath, policy);
+  console.log(
+    `policy=${policy.policyId} stage=${policy.stage} traffic=${policy.trafficFraction} candidate=${policy.candidateCheckpointId}`,
+  );
+  console.log(
+    `lineage_head_hash=${policy.lineageHeadEventHash} automatic_stage_advance=false`,
+  );
+  console.log(`out=${outPath}`);
+};
+
+const runCanaryEvaluate = async (
+  args: readonly string[],
+): Promise<void> => {
+  const policyPath = requiredOption(args, "--policy");
+  const tracesPath = requiredOption(args, "--traces");
+  const advancePolicyPath = requiredOption(args, "--advance-policy");
+  const outPath = requiredOption(args, "--out");
+
+  const policy = await readCanaryActivationPolicy(policyPath);
+  const traces = parseCanaryTraceJsonl(
+    await readFile(tracesPath, "utf8"),
+  );
+  const thresholds = parseCanaryAdvancePolicy(
+    await readJson(advancePolicyPath),
+  );
+  const summary = summarizeCanaryTraces(policy, traces);
+  const evidence = evaluateCanaryAdvance(summary, thresholds);
+  await writeCanaryAdvanceEvidence(outPath, evidence);
+
+  console.log(
+    `policy=${policy.policyId} stage=${policy.stage} selected=${summary.candidateSelected} errors=${summary.candidateErrors} fallbacks=${summary.fallbacks} status=${evidence.status} action=${evidence.action}`,
+  );
+  console.log("automatic_stage_advance=false");
+  console.log(`out=${outPath}`);
+};
+
+const runCanaryDrillCli = async (
+  args: readonly string[],
+): Promise<void> => {
+  const registry = await readCheckpointLineageRegistry(
+    requiredOption(args, "--registry"),
+  );
+  const outDir = requiredOption(args, "--out-dir");
+  const rollbackTargetCheckpointId = optionValue(
+    args,
+    "--rollback-target",
+  );
+  const result = await runCanaryRollbackDrill(registry, {
+    ...(rollbackTargetCheckpointId
+      ? { rollbackTargetCheckpointId }
+      : {}),
+  });
+  await writeCanaryRollbackDrill(outDir, result);
+
+  console.log(
+    `drill=${result.report.drillId} passed=${result.report.passed} candidate=${result.report.candidateCheckpointId} rollback_target=${result.report.rollbackTargetCheckpointId}`,
+  );
+  console.log(
+    `kill=${result.report.checks.faultTriggeredKill} fallback=${result.report.checks.faultFellBackToIncumbent} restored=${result.report.checks.simulatedRegistryRestoredTarget}`,
+  );
+  console.log(
+    "production_registry_mutated=false external_runtime_authority_changed=false",
+  );
+  console.log(`out_dir=${outDir}`);
+  if (!result.report.passed) {
+    throw new Error("canary rollback drill did not pass all checks");
+  }
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -558,6 +731,21 @@ const main = async (): Promise<void> => {
 
   if (command === "lineage-show") {
     await runLineageShow(args);
+    return;
+  }
+
+  if (command === "canary-plan") {
+    await runCanaryPlan(args);
+    return;
+  }
+
+  if (command === "canary-evaluate") {
+    await runCanaryEvaluate(args);
+    return;
+  }
+
+  if (command === "canary-drill") {
+    await runCanaryDrillCli(args);
     return;
   }
 
