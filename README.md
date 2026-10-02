@@ -26,6 +26,7 @@ Verifier     = prove
 - docs/MADO_LAYA_DRIFT_GUARD_RUNBOOK.md — rolling active-limited drift detection and incumbent-only AUTO HOLD
 - docs/MADO_LAYA_HOLD_RECOVERY_RUNBOOK.md — typed HOLD diagnosis, requalification evidence, and new-session restart
 - docs/MADO_LAYA_REBASELINE_RUNBOOK.md — workload-drift baseline candidate, recovery canary chain, and new drift baseline materialization
+- docs/MADO_LAYA_BASELINE_LINEAGE_RUNBOOK.md — append-only distribution epochs and checkpoint-to-world bindings
 
 ## v0.3 shape
 
@@ -657,6 +658,54 @@ drift.policy.json
 
 The generated limited-active policy is still not started automatically. Historical baseline artifacts remain immutable evidence.
 
+## Baseline Lineage / Distribution Epoch Registry
+
+MSO-LAYA-M1.3 gives accepted workload baselines an append-only lineage independent from checkpoint ancestry.
+
+~~~text
+Checkpoint lineage:  which model generation?
+Baseline lineage:    which workload world?
+~~~
+
+Together they form a two-axis evidence map:
+
+~~~text
+                 Epoch 001   Epoch 002
+checkpoint-v2       ●           ●
+checkpoint-v3       ●
+~~~
+
+Epoch changes and checkpoint changes are separate events. A new model generation can bind to the current workload epoch without creating a new epoch. A new workload epoch can keep the same checkpoint.
+
+Initialize:
+
+~~~bash
+npm run mso -- baseline-lineage-init \
+  --registry evidence/baseline/asset-qa.json \
+  --registry-id asset-qa-distribution-lineage \
+  --surface asset.qa
+~~~
+
+Seed the current accepted workload:
+
+~~~bash
+npm run mso -- baseline-register-initial \
+  --registry evidence/baseline/asset-qa.json \
+  --checkpoint-registry evidence/lineage/asset-qa.json \
+  --activation-policy evidence/canary/asset-qa-active.policy.json \
+  --drift-policy evidence/drift/asset-qa.policy.json \
+  --epoch-id epoch-001 \
+  --distribution-summary "Initial accepted asset QA workload" \
+  --source-evidence-ref evidence/drift/asset-qa.policy.json \
+  --binding-evidence-ref activation:asset-qa-active
+~~~
+
+After M1.2 accepts a workload rebaseline, register a new epoch with baseline-register-rebaseline. The previous epoch becomes superseded but remains immutable history.
+
+If only the checkpoint changes while the workload distribution stays the same, use baseline-bind-checkpoint instead. The checkpoint-specific drift policy may have a new id, but its baseline metrics must match the current epoch.
+
+The registry is SHA-256 hash chained, writer locked, atomic on write, and always records runtimeAuthorityManaged=false. Derived state exposes currentEpochId, epoch ancestry, all checkpoint bindings, and checkpointEpochMatrix.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -684,7 +733,8 @@ The generated limited-active policy is still not started automatically. Historic
 - **MSO-LAYA-M1.0** Active-Limited Drift / Auto-Hold Guard ✅
 - **MSO-LAYA-M1.1** Hold Recovery / Requalification Gate ✅
 - **MSO-LAYA-M1.2** Rebaseline / Recovery Canary Evidence Bridge ✅
-- **MSO-LAYA-M1.3** Baseline Lineage / Distribution Epoch Registry
+- **MSO-LAYA-M1.3** Baseline Lineage / Distribution Epoch Registry ✅
+- **MSO-LAYA-M1.4** Checkpoint × Epoch Compatibility / Replay Gate
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
