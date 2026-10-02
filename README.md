@@ -19,6 +19,7 @@ Verifier     = prove
 - docs/MADO_SYSTEM_ONE_OPERATIONS.md — shadow rollout, calibration, activation, rollback, specialization
 - docs/MADO_SYSTEM_ONE_CONTEXT_PLANE_SPEC.md — query-aware context compilation and reversible SIEVE
 - docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
+- docs/MADO_LAYA_FINETUNE_RUNBOOK.md — reviewed disagreement → soft-target candidate pack → held-out validation loop
 
 ## v0.3 shape
 
@@ -272,6 +273,45 @@ Raw live agreement is never treated as correctness. A candidate can reach `candi
 
 Promotion policy thresholds are explicit per decision surface. There are no built-in universal Laya thresholds. The files under `fixtures/promotion/` are examples for schema and workflow only, not production defaults.
 
+## Fine-tune Candidate
+
+MSO-LAYA-M0.6 converts reviewed Disagreement Lab records into a provenance-bearing Laya RLCD candidate pack.
+
+~~~bash
+npm run mso -- finetune-pack \
+  --queue evidence/disagreements/<lab>.jsonl \
+  --annotations evidence/finetune/annotations.jsonl \
+  --out-dir evidence/finetune/<pack> \
+  --validation-fraction 0.2 \
+  --split-seed mso-laya-2026-10
+~~~
+
+The output contains:
+
+~~~text
+manifest.json
+train.jsonl
+validation.jsonl
+held.jsonl
+~~~
+
+Training-ready rows use Laya's `{state, questions, gold}` case schema. MADO choice options are mapped to Laya criteria, noul targets use `false/true` probabilities, and score targets are mapped to Laya's zero-based levels.
+
+The gate into `train.jsonl` is deliberately strict:
+
+- source disagreement must already be marked `fineTuneCandidate: true`
+- an explicit include annotation is required
+- reviewed hard label, label source, and review time are required
+- an RLCD soft target is required
+- soft-target provenance `sourceRef` is required
+- the soft target argmax must agree with the reviewed hard label
+
+A reviewed hard label without a soft target is preserved in `held.jsonl` as `missing_soft_target`; it is never silently converted into a one-hot target.
+
+Splitting is deterministic, grouped by `caseId`, and stratified by task family. Questions from the same state cannot land on opposite sides of train/validation. The generated `validation.jsonl` is not training input.
+
+The current Laya trainer owns a separate calibration slice inside the training set. MADO therefore keeps validation fully untouched for post-training evaluation. Fine-tuning creates a new candidate checkpoint; it does not inherit the previous checkpoint's promotion status.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -292,7 +332,8 @@ Promotion policy thresholds are explicit per decision surface. There are no buil
 - **MSO-LAYA-M0.3** Disagreement Lab ✅
 - **MSO-LAYA-M0.4** Real Shadow Bridge ✅
 - **MSO-LAYA-M0.5** Promotion Gate ✅
-- **MSO-LAYA-M0.6** Fine-tune Candidate
+- **MSO-LAYA-M0.6** Fine-tune Candidate ✅
+- **MSO-LAYA-M0.7** Candidate Re-eval Loop
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
