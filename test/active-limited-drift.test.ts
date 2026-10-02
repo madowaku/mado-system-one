@@ -117,8 +117,7 @@ const baselineSummary = (policyId: string): CanarySessionSummary => ({
   killTrips: 0,
 });
 
-const driftPolicy = () => {
-  const active = activationPolicy();
+const driftPolicy = (active = activationPolicy()) => {
   return buildActiveLimitedDriftPolicy(
     active,
     active,
@@ -192,7 +191,7 @@ const request = (traceId: string): DecisionRequest => ({
 
 test("drift guard waits for minimum evidence before holding", async () => {
   const active = activationPolicy();
-  const policy = driftPolicy();
+  const policy = driftPolicy(active);
   const killSwitch = new CanaryKillSwitch();
   const guard = new ActiveLimitedDriftGuard({
     policy,
@@ -228,7 +227,7 @@ test("drift guard waits for minimum evidence before holding", async () => {
 
 test("confidence drift auto-holds candidate authority and later traffic stays incumbent-only", async () => {
   const active = activationPolicy();
-  const policy = driftPolicy();
+  const policy = driftPolicy(active);
   const killSwitch = new CanaryKillSwitch();
   const holdSink = new MemoryDriftHoldEvidenceSink();
   const guard = new ActiveLimitedDriftGuard({
@@ -286,7 +285,7 @@ test("confidence drift auto-holds candidate authority and later traffic stays in
 
 test("offline drift evaluation flags fallback and error regression without executing rollback", () => {
   const active = activationPolicy();
-  const policy = driftPolicy();
+  const policy = driftPolicy(active);
   const traces = [1, 2, 3].map((index) => ({
     schemaVersion: "mso.canary.v0" as const,
     sessionId: "offline",
@@ -361,7 +360,7 @@ test("offline drift evaluation flags fallback and error regression without execu
 
 test("drift policy rejects identity mismatch and non-limited activation", () => {
   const active = activationPolicy();
-  const basePolicy = driftPolicy();
+  const basePolicy = driftPolicy(active);
 
   const other = {
     ...active,
