@@ -443,6 +443,17 @@ const bucketFor = (policyId: string, traceId: string): number => {
   return digest.readUInt32BE(0) / 2 ** 32;
 };
 
+const blockedRiskTags = new Set([
+  "payment",
+  "purchase",
+  "delete",
+  "publish",
+  "permission_change",
+  "secret_exposure",
+  "external_share",
+  "account_change",
+]);
+
 const eligibility = (
   request: DecisionRequest,
   policy: CanaryActivationPolicy,
@@ -456,6 +467,20 @@ const eligibility = (
   }
   if (request.metadata?.canaryEligible !== true) {
     reasons.push("explicit_canary_eligibility_missing");
+  }
+  if (request.metadata?.reversible !== true) {
+    reasons.push("reversible_attestation_missing");
+  }
+  if (request.metadata?.impactClass !== "low") {
+    reasons.push("low_impact_attestation_missing");
+  }
+  const riskTags = Array.isArray(request.metadata?.riskTags)
+    ? request.metadata.riskTags.filter(
+        (item): item is string => typeof item === "string",
+      )
+    : [];
+  if (riskTags.some((tag) => blockedRiskTags.has(tag))) {
+    reasons.push("blocked_risk_tag");
   }
   return {
     eligible: reasons.length === 0,
@@ -969,12 +994,13 @@ export const summarizeCanaryTraces = (
       p95IncumbentWallLatencyMs === 0
         ? 0
         : p95CandidateWallLatencyMs / p95IncumbentWallLatencyMs,
-    killTrips: traces.filter(
-      (trace, index) =>
+    killTrips: traces.some(
+      (trace) =>
         !trace.killSwitchAtStart.killed &&
-        trace.killSwitchAtReturn.killed &&
-        (index === 0 || !traces[index - 1]?.killSwitchAtReturn.killed),
-    ).length,
+        trace.killSwitchAtReturn.killed,
+    )
+      ? 1
+      : 0,
   };
 };
 
