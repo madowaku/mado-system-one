@@ -167,6 +167,7 @@ const annotations: FineTuneAnnotation[] = [
       type: "noul",
       probabilities: { false: 0.1, true: 0.9 },
       source: "teacher",
+      sourceRef: "teacher-run-2",
     },
   },
   {
@@ -180,6 +181,7 @@ const annotations: FineTuneAnnotation[] = [
       type: "choice",
       probabilities: { accept: 0.15, reject: 0.85 },
       source: "verified_outcome",
+      sourceRef: "verified-outcome-1",
     },
   },
   {
@@ -193,6 +195,7 @@ const annotations: FineTuneAnnotation[] = [
       type: "score",
       distribution: [0.02, 0.05, 0.13, 0.65, 0.15],
       source: "teacher",
+      sourceRef: "teacher-run-3",
     },
   },
 ];
@@ -279,6 +282,7 @@ test("hard-reviewed records without soft targets are held, not one-hot encoded",
         decision: "include",
         reviewedLabel: "accept",
         labelSource: "human",
+        reviewedAt: "2026-10-02T00:00:00.000Z",
       },
     ],
   );
@@ -298,10 +302,12 @@ test("soft target whose argmax contradicts reviewed label is held", () => {
         decision: "include",
         reviewedLabel: "accept",
         labelSource: "human",
+        reviewedAt: "2026-10-02T00:00:00.000Z",
         softTarget: {
           type: "choice",
           probabilities: { accept: 0.1, reject: 0.9 },
           source: "teacher",
+          sourceRef: "teacher-run-conflict",
         },
       },
     ],
