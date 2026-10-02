@@ -252,6 +252,20 @@ Rollback first. Analyze second.
 
 Do not hot-fix unsafe calibration during an incident if a known-safe baseline exists.
 
+For Laya checkpoint generations, the lineage registry adds these invariants:
+
+- checkpoint identity is the M0.7 artifact fingerprint, not a directory or model nickname,
+- rollback targets must be registered known-good ancestors,
+- known-good status carries an evidence reference and can later be revoked,
+- once a lineage head exists, a promoted candidate must be its direct child,
+- rollback planning does not change runtime authority,
+- a rollback plan pins the current registry event-chain hash and becomes stale after any registry mutation,
+- completed rollback is recorded only after an external execution reference exists,
+- rollback restoration is recorded as restored, not as a new promotion,
+- registry events are hash-chained and local writers are serialized.
+
+The checkpoint lineage registry is an evidence ledger. It is not the runtime deployment controller.
+
 ## 15. Drift
 
 Drift can come from:
@@ -405,7 +419,15 @@ Reliability:
 6. reproduce offline
 7. fix code / provider / calibration
 8. return to SHADOW
-9. promote again
+9. re-evaluate and promote again
+
+When checkpoint rollback is involved:
+
+- generate a rollback plan against the current lineage head,
+- switch runtime authority through the operational control plane,
+- preserve the external change/incident reference,
+- record the completed rollback in the lineage registry,
+- revoke rollback-safety status for any checkpoint no longer considered a safe fallback.
 ~~~
 
 ## 25. Chaos tests
