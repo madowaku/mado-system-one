@@ -519,7 +519,7 @@ export const appendLineageEvent = (
   const occurredAt = (options.now ?? new Date()).toISOString();
   const eventId =
     options.eventId ??
-    `${payload.type}-${occurredAt.replace(/[:.]/g, "-")}`;
+    `${payload.type}-${String(registry.events.length + 1).padStart(6, "0")}-${occurredAt.replace(/[:.]/g, "-")}`;
   const unsigned = {
     eventId,
     occurredAt,
