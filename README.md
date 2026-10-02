@@ -21,6 +21,7 @@ Verifier     = prove
 - docs/MADO_MULTI_AGENT_FORGE_SPEC.md — contract-first multi-agent production, ownership, independent review, falsification, and human override
 - docs/MADO_LAYA_FINETUNE_RUNBOOK.md — reviewed disagreement → soft-target candidate pack → held-out validation loop
 - docs/MADO_LAYA_REEVAL_RUNBOOK.md — checkpoint export → hold-out re-eval → regression slices → Promotion Gate re-entry
+- docs/MADO_LAYA_LINEAGE_RUNBOOK.md — checkpoint ancestry, promotion evidence, rollback safety, and rollback recording
 
 ## v0.3 shape
 
@@ -357,6 +358,65 @@ Aggregate improvement does not erase local regression. `regressions.jsonl` recor
 
 M0.6 packs created before this milestone do not contain the re-evaluation metadata. Regenerate the fine-tune pack before using M0.7.
 
+## Checkpoint Lineage / Rollback Registry
+
+MSO-LAYA-M0.8 records checkpoint generations as a hash-chained event ledger.
+
+~~~text
+base-v1 [known good]
+  |
+  +-- candidate-v2
+        |
+        +-- candidate-v3
+~~~
+
+The registry is scoped to one decision surface and explicitly records:
+
+~~~text
+runtimeAuthorityManaged: false
+~~~
+
+It tracks artifact fingerprints, parent/child ancestry, promotion evidence references, rollback-safety attestations, and recorded rollback executions without changing production routing.
+
+Initialize and seed a registry:
+
+~~~bash
+npm run mso -- lineage-init \
+  --registry evidence/lineage/asset-qa.json \
+  --registry-id asset-qa-laya \
+  --surface asset.qa
+
+npm run mso -- lineage-register \
+  --registry evidence/lineage/asset-qa.json \
+  --checkpoint-id base-v1 \
+  --checkpoint-dir checkpoints/base-v1 \
+  --origin base \
+  --known-good \
+  --known-good-ref production-baseline-approval:asset.qa:v1
+~~~
+
+Registering a fine-tuned child can bind it to M0.7 re-evaluation evidence. The candidate fingerprint must match the re-eval candidate, and the re-eval base fingerprint must match the registered parent.
+
+Promotion recording requires an M0.5 gate that is actually `eligible_for_promotion`, matching M0.7 evidence, a known-good rollback ancestor, and the current lineage head as the candidate's parent.
+
+Rollback safety can be attested or revoked later with `lineage-set-rollback-safety`. This lets a promoted generation become the known-good rollback parent for the next generation without rewriting history.
+
+Rollback is deliberately two-phase:
+
+~~~text
+rollback-plan
+  ↓
+operator/runtime performs actual checkpoint switch
+  ↓
+lineage-record-rollback --execution-ref ...
+~~~
+
+Plans are non-executing and pin the current registry event-chain hash. If any event is added after planning, the stale plan is rejected.
+
+The ledger protects common local races with an exclusive writer lock and atomic replacement. Each event carries `prevEventHash` and `eventHash`; editing historical event contents breaks verification.
+
+Lifecycle state distinguishes `promoted` from `restored`, so incident recovery is not misreported as a fresh promotion.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -379,7 +439,8 @@ M0.6 packs created before this milestone do not contain the re-evaluation metada
 - **MSO-LAYA-M0.5** Promotion Gate ✅
 - **MSO-LAYA-M0.6** Fine-tune Candidate ✅
 - **MSO-LAYA-M0.7** Candidate Re-eval Loop ✅
-- **MSO-LAYA-M0.8** Checkpoint Lineage / Rollback Registry
+- **MSO-LAYA-M0.8** Checkpoint Lineage / Rollback Registry ✅
+- **MSO-LAYA-M0.9** Canary Activation / Rollback Drill
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 
