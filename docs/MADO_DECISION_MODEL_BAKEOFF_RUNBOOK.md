@@ -168,20 +168,14 @@ Then inspect by decision pattern rather than aggregate score alone.
 
 A provider may be appropriate for ROUTE and poor for GATE. MADO keeps those differences visible in calibration slices and leaves later authority to the existing pattern-scoped Promotion Gate.
 
+## M0.2 handoff
+
+MSO-DM-M0.2 is implemented by `MultiShadowSession`.
+
+Candidates that pass this bake-off can now observe the same live request in one shared session without re-running the incumbent. The shared artifact preserves candidate-specific `mso.shadow.v0` pair traces so the existing Promotion Gate contract remains intact.
+
+See `MADO_MULTI_SHADOW_SESSION_RUNBOOK.md`.
+
 ## Next milestone
 
-MSO-DM-M0.2 should make live multi-shadow collection practical:
-
-```text
-one incumbent
-   |
-   +--> shadow A
-   +--> shadow B
-   +--> shadow C
-             |
-       shared evidence session
-             |
-       disagreement triage
-```
-
-That would let Clef, Clef-flash, Laya, and future Jev providers observe the same live request without serially rebuilding separate ShadowBridge sessions.
+MSO-DM-M0.3 should aggregate shared sessions into a longitudinal Provider Evidence Ledger covering provider latency, errors, reviewed outcomes, cost, disagreement clusters, and pattern-specific drift.

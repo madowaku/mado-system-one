@@ -23,6 +23,9 @@ This directory contains the canonical design documents for MADO System One.
 7. **MADO_DECISION_MODEL_BAKEOFF_RUNBOOK.md / MSO-DM-M0.1**  
    Cross-provider calibration, explicit SHADOW-entry policy, disagreement-as-review-load, and non-authoritative shadow plans.
 
+8. **MADO_MULTI_SHADOW_SESSION_RUNBOOK.md / MSO-DM-M0.2**  
+   One-incumbent / many-shadow runtime observation, shared evidence sessions, one review queue, and Promotion Gate-compatible extraction.
+
 Architecture should move slowly. The Pattern Atlas can absorb fast-moving application experiments. Operations defines how a decision surface earns trust. Context Plane work should remain recall-first and reversible.
 
 
