@@ -706,6 +706,29 @@ If only the checkpoint changes while the workload distribution stays the same, u
 
 The registry is SHA-256 hash chained, writer locked, atomic on write, and always records runtimeAuthorityManaged=false. Derived state exposes currentEpochId, epoch ancestry, all checkpoint bindings, and checkpointEpochMatrix.
 
+## Decision Model Provider Matrix / Clef Intake
+
+MSO-DM-M0.0 generalizes the provider layer beyond the Laya growth track.
+
+Cloudflare Clef and Clef-flash now sit behind the same `SystemOneProvider` contract used by existing eval, comparison, Disagreement Lab, Shadow Bridge, and Promotion Gate flows. The first intake deliberately exposes text only even though the upstream Clef models are multimodal. Vision requires a separate reviewed media bridge and workload-specific evidence before it becomes a MADO adapter capability.
+
+The machine-readable registry lives in `src/providers/matrix.ts`, while `src/providers/clef.ts` provides an injectable System One adapter plus a Cloudflare Workers AI REST transport.
+
+~~~bash
+export CLOUDFLARE_ACCOUNT_ID=<account>
+export CLOUDFLARE_AUTH_TOKEN=<token>
+
+npm run mso -- eval fixtures/eval/smoke.jsonl --provider clef-flash
+
+npm run mso -- compare fixtures/eval/smoke.jsonl \
+  --providers replay,laya,clef-flash \
+  --out evidence/compare/replay-laya-clef-flash.json
+~~~
+
+Clef, Clef-flash, Laya, and future Jev adapters do not share thresholds merely because their wire shapes are similar. Probability semantics, confidence semantics, calibration, pattern suitability, latency, and operational evidence remain provider-by-task artifacts.
+
+See `docs/MADO_DECISION_MODEL_PROVIDER_MATRIX.md`.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -735,6 +758,8 @@ The registry is SHA-256 hash chained, writer locked, atomic on write, and always
 - **MSO-LAYA-M1.2** Rebaseline / Recovery Canary Evidence Bridge ✅
 - **MSO-LAYA-M1.3** Baseline Lineage / Distribution Epoch Registry ✅
 - **MSO-LAYA-M1.4** Checkpoint × Epoch Compatibility / Replay Gate
+- **MSO-DM-M0.0** Decision Model Provider Matrix / Clef Intake ✅
+- **MSO-DM-M0.1** Cross-Provider Calibration / Shadow Bake-off
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

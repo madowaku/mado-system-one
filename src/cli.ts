@@ -95,6 +95,7 @@ import {
   createLayaCheckpointProvider,
   createLayaTsProvider,
 } from "./providers/laya.js";
+import { createCloudflareClefProvider } from "./providers/clef.js";
 import { ReplaySystemOneProvider } from "./providers/replay.js";
 import {
   appendLineageEvent,
@@ -129,9 +130,9 @@ import {
 const usage = (): never => {
   console.error(
     "Usage:\n" +
-      "  mso eval <fixture.jsonl> [--provider replay|laya] [--out <evidence.json>] [--dataset <id>]\n" +
-      "  mso compare <fixture.jsonl> [--providers replay,laya] [--out <comparison.json>] [--dataset <id>]\n" +
-      "  mso disagreements <fixture.jsonl> [--providers replay,laya] [--pair replay:laya] [--focus laya] [--out <summary.json>] [--queue <review.jsonl>]\n" +
+      "  mso eval <fixture.jsonl> [--provider replay|laya|clef|clef-flash] [--out <evidence.json>] [--dataset <id>]\n" +
+      "  mso compare <fixture.jsonl> [--providers replay,laya,clef-flash] [--out <comparison.json>] [--dataset <id>]\n" +
+      "  mso disagreements <fixture.jsonl> [--providers replay,laya,clef-flash] [--pair laya:clef-flash] [--focus clef-flash] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
       "  mso candidate-reeval --validation <validation.jsonl> --base-checkpoint <onnx-dir> --candidate-checkpoint <onnx-dir> --out-dir <dir> [--model english|multilingual|typed-decisions] [--incumbent-eval <eval.json>]\n" +
@@ -156,6 +157,7 @@ const usage = (): never => {
       "  mso baseline-show --registry <baseline-registry.json>\n" +
       "  mso rebaseline-accept --registry <registry.json> --candidate <rebaseline.candidate.json> --canary-1-policy <policy.json> --canary-1-advance <advance.json> --canary-5-policy <policy.json> --canary-5-advance <advance.json> --canary-25-policy <policy.json> --canary-25-advance <advance.json> --review <acceptance-review.json> --limited-active-policy-id <id> --drift-policy-id <id> --window-size <n> --min-selected <n> --min-comparable <n> --min-confidence-samples <n> --max-candidate-error <0..1> --max-incumbent-error <0..1> --max-fallback <0..1> --max-disagreement <0..1> --max-latency-ratio <n> --max-confidence-delta <0..1> --out-dir <dir>\n" +
       "Shared Laya options: [--model <name>] [--lang <code>] [--min-confidence <0..1>]\n" +
+      "Cloudflare Clef env: CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_AUTH_TOKEN\n" +
       "Compare options: [--score-tolerance <number>]\n" +
       "Disagreement option: [--high-confidence <0..1>]",
   );
@@ -204,6 +206,20 @@ const createProvider = async (
       ...(model ? { model } : {}),
       ...(language ? { language } : {}),
       ...(minConfidence === undefined ? {} : { minConfidence }),
+    });
+  }
+  if (name === "clef" || name === "clef-flash") {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = process.env.CLOUDFLARE_AUTH_TOKEN;
+    if (!accountId || !apiToken) {
+      throw new Error(
+        `${name} requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AUTH_TOKEN`,
+      );
+    }
+    return createCloudflareClefProvider({
+      accountId,
+      apiToken,
+      model: name,
     });
   }
   throw new Error(`unsupported provider: ${name}`);
