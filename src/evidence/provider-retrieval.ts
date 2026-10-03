@@ -453,14 +453,15 @@ export const buildProviderSuitabilityContextPack = (
         reviews,
         { pattern: options.pattern },
       );
-      const task = taskFamilyObservations
-        ? contextSlice(
-            "task_family",
-            taskFamilyObservations,
-            reviews,
-            { taskFamily },
-          )
-        : undefined;
+      const task =
+        taskFamily !== undefined && taskFamilyObservations
+          ? contextSlice(
+              "task_family",
+              taskFamilyObservations,
+              reviews,
+              { taskFamily },
+            )
+          : undefined;
       const exact = contextSlice(
         "exact",
         exactObservations,
