@@ -17,6 +17,9 @@ This directory contains the canonical design documents for MADO System One.
 5. **MADO_MULTI_AGENT_FORGE_SPEC.md v0.1**  
    Contract-first multi-agent production: divergence, jury, ownership leases, builder/reviewer separation, falsification, experience evaluation, and human override.
 
+6. **MADO_DECISION_MODEL_PROVIDER_MATRIX.md / MSO-DM-M0.0**  
+   Provider-neutral Decision Model intake, Clef / Clef-flash adapter boundary, semantic metadata, pricing snapshot, and cross-provider bake-off entrypoint.
+
 Architecture should move slowly. The Pattern Atlas can absorb fast-moving application experiments. Operations defines how a decision surface earns trust. Context Plane work should remain recall-first and reversible.
 
 
