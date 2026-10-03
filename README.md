@@ -829,6 +829,44 @@ Every derived state records `runtimeAuthorityManaged=false` and `automaticRoutin
 
 See `docs/MADO_PROVIDER_EVIDENCE_LEDGER_RUNBOOK.md`.
 
+## Provider Evidence Retrieval / Suitability Context Pack
+
+MSO-DM-M0.4 retrieves only the evidence relevant to an incoming decision context instead of feeding the entire Provider Evidence Ledger downstream.
+
+~~~text
+incoming
+  pattern = gate
+  taskFamily = asset.qa
+        |
+        v
+Provider Evidence Ledger
+        |
+        +--> exact context
+        +--> pattern context
+        +--> task-family context
+        +--> overall context
+        |
+        v
+mso.provider-suitability-context.v0
+~~~
+
+The pack contains bounded recent windows, disagreement clusters, source references, reviewed coverage, and provider metrics. It copies no raw prompt/state from the ledger source.
+
+~~~bash
+npm run mso -- provider-context \
+  --ledger evidence/provider-ledger/asset-qa.json \
+  --pattern gate \
+  --task-family asset.qa \
+  --providers laya,clef-flash,clef \
+  --out evidence/provider-context/asset-qa-gate.json
+~~~
+
+Providers are emitted lexicographically, never ranked. If a ledger contains more providers than the configured bound, MADO refuses implicit truncation and asks the caller to provide an explicit provider set.
+
+Every pack records `evidenceOnly=true`, `automaticProviderRanking=false`, `automaticRoutingDecision=false`, and pins the ledger head hash that produced it.
+
+See `docs/MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md`.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -862,7 +900,8 @@ See `docs/MADO_PROVIDER_EVIDENCE_LEDGER_RUNBOOK.md`.
 - **MSO-DM-M0.1** Cross-Provider Calibration / Shadow Bake-off ✅
 - **MSO-DM-M0.2** Multi-Shadow Session / Shared Evidence ✅
 - **MSO-DM-M0.3** Provider Evidence Ledger / Longitudinal Decision Memory ✅
-- **MSO-DM-M0.4** Provider Evidence Retrieval / Suitability Context Pack
+- **MSO-DM-M0.4** Provider Evidence Retrieval / Suitability Context Pack ✅
+- **MSO-DM-M0.5** Evidence-Aware Router Policy / Explainable Provider Selection
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

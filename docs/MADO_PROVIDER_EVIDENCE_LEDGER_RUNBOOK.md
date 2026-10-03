@@ -292,20 +292,14 @@ M0.3 Provider Evidence Ledger
 durable longitudinal decision memory
 ```
 
+## M0.4 handoff
+
+MSO-DM-M0.4 implements bounded Provider Evidence Retrieval.
+
+A caller can now request one pattern / task-family context and materialize an evidence-only `mso.provider-suitability-context.v0` pack. The pack pins the source ledger head hash, preserves no raw request state, and refuses implicit provider truncation.
+
+See `MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md`.
+
 ## Next milestone
 
-MSO-DM-M0.4 should retrieve the relevant parts of this ledger for one incoming decision surface and produce a bounded **Provider Suitability Context Pack**.
-
-That pack should be evidence-only:
-
-```text
-incoming pattern / task family
-          |
-          v
-relevant provider history
-          |
-          v
-compact context pack
-```
-
-It should not choose or activate a provider on its own.
+MSO-DM-M0.5 can consume this pack inside an explicit router policy and produce an explainable provider selection. Selection must remain policy-scoped, reversible, and separate from the evidence pack itself.

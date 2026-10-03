@@ -18,6 +18,8 @@ export * from "./shadow/bridge.js";
 export * from "./shadow/multi.js";
 export * from "./evidence/provider-ledger.js";
 export * from "./evidence/provider-ledger-io.js";
+export * from "./evidence/provider-retrieval.js";
+export * from "./evidence/provider-retrieval-io.js";
 export * from "./promotion/gate.js";
 export * from "./promotion/io.js";
 export * from "./finetune/candidate.js";

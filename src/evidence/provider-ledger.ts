@@ -424,7 +424,7 @@ const reviewKey = (
   providerId: string,
 ): string => `${traceId}::${questionId}::${providerId}`;
 
-const observationsInLedger = (
+export const observationsInLedger = (
   ledger: ProviderEvidenceLedger,
 ): ProviderObservation[] =>
   ledger.events.flatMap((event) =>
@@ -433,7 +433,7 @@ const observationsInLedger = (
       : [],
   );
 
-const reviewsInLedger = (
+export const reviewsInLedger = (
   ledger: ProviderEvidenceLedger,
 ): ProviderReviewObservation[] =>
   ledger.events.flatMap((event) =>
@@ -729,7 +729,7 @@ const emptyMetrics = (): ProviderEvidenceMetrics => ({
   reviewedAccuracy: 0,
 });
 
-const metricsFrom = (input: MetricAccumulator): ProviderEvidenceMetrics => {
+export const metricsFrom = (input: MetricAccumulator): ProviderEvidenceMetrics => {
   if (input.observations.length === 0 && input.reviews.length === 0) {
     return emptyMetrics();
   }
@@ -808,7 +808,7 @@ const metricsFrom = (input: MetricAccumulator): ProviderEvidenceMetrics => {
   };
 };
 
-const reviewsForObservations = (
+export const reviewsForObservations = (
   observations: readonly ProviderObservation[],
   allReviews: readonly ProviderReviewObservation[],
 ): ProviderReviewObservation[] => {
