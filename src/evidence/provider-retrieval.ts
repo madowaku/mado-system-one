@@ -370,14 +370,14 @@ const selectedProviderIds = (
     ? [...new Set(queryProviderIds.map((item) => nonEmpty(item, "providerId")))].sort()
     : available;
 
-  if (requested.length > maxProviders) {
-    throw new Error(
-      `provider context request contains ${requested.length} providers but maxProviders=${maxProviders}; pass a smaller explicit provider set`,
-    );
-  }
   if (!queryProviderIds && available.length > maxProviders) {
     throw new Error(
       `ledger contains ${available.length} providers but maxProviders=${maxProviders}; pass providerIds explicitly to avoid implicit truncation or ranking`,
+    );
+  }
+  if (requested.length > maxProviders) {
+    throw new Error(
+      `provider context request contains ${requested.length} providers but maxProviders=${maxProviders}; pass a smaller explicit provider set`,
     );
   }
 
