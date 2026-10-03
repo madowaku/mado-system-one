@@ -97,6 +97,11 @@ import {
   parseShadowTraceJsonl,
 } from "./promotion/io.js";
 import {
+  extractShadowTracesForProvider,
+  parseMultiShadowSessionJsonl,
+  writeExtractedShadowTraces,
+} from "./shadow/multi.js";
+import {
   createLayaCheckpointProvider,
   createLayaTsProvider,
 } from "./providers/laya.js";
@@ -138,6 +143,7 @@ const usage = (): never => {
       "  mso eval <fixture.jsonl> [--provider replay|laya|clef|clef-flash] [--out <evidence.json>] [--dataset <id>]\n" +
       "  mso compare <fixture.jsonl> [--providers replay,laya,clef-flash] [--out <comparison.json>] [--dataset <id>]\n" +
       "  mso dm-bakeoff <fixture.jsonl> --providers <csv> --incumbent <provider-id> --policy <policy.json> [--out <evidence.json>] [--dataset <id>]\n" +
+      "  mso multi-shadow-extract --sessions <sessions.jsonl> --provider <provider-id> --out <shadow.jsonl>\n" +
       "  mso disagreements <fixture.jsonl> [--providers replay,laya,clef-flash] [--pair laya:clef-flash] [--focus clef-flash] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
@@ -1344,6 +1350,22 @@ const main = async (): Promise<void> => {
 
   if (command === "rebaseline-accept") {
     await runRebaselineAccept(args);
+    return;
+  }
+
+  if (command === "multi-shadow-extract") {
+    const sessionsPath = requiredOption(args, "--sessions");
+    const providerId = requiredOption(args, "--provider");
+    const outPath = requiredOption(args, "--out");
+    const sessions = parseMultiShadowSessionJsonl(
+      await readFile(sessionsPath, "utf8"),
+    );
+    const traces = extractShadowTracesForProvider(sessions, providerId);
+    await writeExtractedShadowTraces(outPath, traces);
+    console.log(
+      `provider=${providerId} sessions=${sessions.length} extracted_traces=${traces.length}`,
+    );
+    console.log(`evidence=${outPath}`);
     return;
   }
 

@@ -751,6 +751,37 @@ Passing M0.1 does not activate anything. Every artifact records `automaticSelect
 
 See `docs/MADO_DECISION_MODEL_BAKEOFF_RUNBOOK.md`.
 
+## Multi-Shadow Session / Shared Evidence
+
+MSO-DM-M0.2 lets one incumbent request be observed by multiple Decision Model providers without re-running the incumbent.
+
+~~~text
+request
+  |
+  +--> incumbent --------------------> authoritative response
+  |
+  +--> Laya -------------------------+
+  +--> Clef-flash -------------------+--> one mso.multi-shadow.v0 session
+  +--> Clef -------------------------+        |
+                                          one review row
+                                          candidate pair traces
+~~~
+
+`MultiShadowSession` starts all observers concurrently but returns as soon as the incumbent completes. Shadow latency, disagreement, and provider failure never replace or delay the authoritative decision.
+
+Each shared session embeds one compatible `mso.shadow.v0` pair trace per candidate. A candidate-specific stream for the existing Promotion Gate can be materialized with:
+
+~~~bash
+npm run mso -- multi-shadow-extract \
+  --sessions evidence/multi-shadow/sessions.jsonl \
+  --provider clef-flash \
+  --out evidence/shadow/clef-flash.jsonl
+~~~
+
+For a single candidate, the original `ShadowBridge` remains the simpler primitive.
+
+See `docs/MADO_MULTI_SHADOW_SESSION_RUNBOOK.md`.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -782,7 +813,8 @@ See `docs/MADO_DECISION_MODEL_BAKEOFF_RUNBOOK.md`.
 - **MSO-LAYA-M1.4** Checkpoint × Epoch Compatibility / Replay Gate
 - **MSO-DM-M0.0** Decision Model Provider Matrix / Clef Intake ✅
 - **MSO-DM-M0.1** Cross-Provider Calibration / Shadow Bake-off ✅
-- **MSO-DM-M0.2** Multi-Shadow Session / Shared Evidence
+- **MSO-DM-M0.2** Multi-Shadow Session / Shared Evidence ✅
+- **MSO-DM-M0.3** Provider Evidence Ledger / Longitudinal Decision Memory
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

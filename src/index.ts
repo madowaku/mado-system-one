@@ -15,6 +15,7 @@ export * from "./eval/compare.js";
 export * from "./eval/bakeoff.js";
 export * from "./eval/disagreement.js";
 export * from "./shadow/bridge.js";
+export * from "./shadow/multi.js";
 export * from "./promotion/gate.js";
 export * from "./promotion/io.js";
 export * from "./finetune/candidate.js";
