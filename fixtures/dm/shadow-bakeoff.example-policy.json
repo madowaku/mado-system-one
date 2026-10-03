@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mso.dm-shadow-policy.v0",
+  "policyId": "smoke-shadow-entry-example",
+  "minQuestions": 4,
+  "minAccuracy": 0.75,
+  "maxProviderErrorRate": 0.1,
+  "minCalibrationCoverage": 0.75,
+  "maxEce10": 0.25,
+  "maxBrier": 0.2,
+  "minComparableQuestionsWithIncumbent": 4,
+  "maxLatencyP95Ms": 2000,
+  "maxAverageEstimatedCostPerCase": 0.05,
+  "maxReviewLoadRate": 0.5
+}

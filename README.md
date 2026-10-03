@@ -729,6 +729,28 @@ Clef, Clef-flash, Laya, and future Jev adapters do not share thresholds merely b
 
 See `docs/MADO_DECISION_MODEL_PROVIDER_MATRIX.md`.
 
+## Cross-Provider Calibration / Shadow Bake-off
+
+MSO-DM-M0.1 converts the provider bake-off into an explicit SHADOW-entry gate.
+
+It runs the same labeled fixture across multiple providers, then records accuracy, provider errors, latency, cost, pairwise disagreement, calibration coverage, Brier score, 10-bin ECE, reliability bins, and slices by pattern / task family / question type.
+
+Calibration keeps its provenance. Choice questions use the probability of the selected option, noul uses the probability of the predicted yes/no side, and score uses provider-reported confidence only.
+
+~~~bash
+npm run mso -- dm-bakeoff fixtures/eval/smoke.jsonl \
+  --providers replay,laya,clef-flash \
+  --incumbent replay \
+  --policy fixtures/dm/shadow-bakeoff.example-policy.json \
+  --out evidence/dm/smoke-bakeoff.json
+~~~
+
+A provider ends as `reference_incumbent`, `eligible_for_shadow`, `blocked`, or `insufficient_evidence`.
+
+Passing M0.1 does not activate anything. Every artifact records `automaticSelection=false`, `runtimeAuthorityChange=false`, and emits only a non-authoritative shadow plan for passing candidates.
+
+See `docs/MADO_DECISION_MODEL_BAKEOFF_RUNBOOK.md`.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -759,7 +781,8 @@ See `docs/MADO_DECISION_MODEL_PROVIDER_MATRIX.md`.
 - **MSO-LAYA-M1.3** Baseline Lineage / Distribution Epoch Registry ✅
 - **MSO-LAYA-M1.4** Checkpoint × Epoch Compatibility / Replay Gate
 - **MSO-DM-M0.0** Decision Model Provider Matrix / Clef Intake ✅
-- **MSO-DM-M0.1** Cross-Provider Calibration / Shadow Bake-off
+- **MSO-DM-M0.1** Cross-Provider Calibration / Shadow Bake-off ✅
+- **MSO-DM-M0.2** Multi-Shadow Session / Shared Evidence
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

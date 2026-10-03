@@ -20,6 +20,9 @@ This directory contains the canonical design documents for MADO System One.
 6. **MADO_DECISION_MODEL_PROVIDER_MATRIX.md / MSO-DM-M0.0**  
    Provider-neutral Decision Model intake, Clef / Clef-flash adapter boundary, semantic metadata, pricing snapshot, and cross-provider bake-off entrypoint.
 
+7. **MADO_DECISION_MODEL_BAKEOFF_RUNBOOK.md / MSO-DM-M0.1**  
+   Cross-provider calibration, explicit SHADOW-entry policy, disagreement-as-review-load, and non-authoritative shadow plans.
+
 Architecture should move slowly. The Pattern Atlas can absorb fast-moving application experiments. Operations defines how a decision surface earns trust. Context Plane work should remain recall-first and reversible.
 
 

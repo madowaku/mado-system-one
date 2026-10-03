@@ -54,6 +54,11 @@ import {
   writeComparisonEvidence,
 } from "./eval/compare.js";
 import {
+  parseShadowBakeoffPolicy,
+  runCrossProviderBakeoff,
+  writeCrossProviderBakeoffEvidence,
+} from "./eval/bakeoff.js";
+import {
   buildDisagreementLab,
   writeDisagreementLab,
 } from "./eval/disagreement.js";
@@ -132,6 +137,7 @@ const usage = (): never => {
     "Usage:\n" +
       "  mso eval <fixture.jsonl> [--provider replay|laya|clef|clef-flash] [--out <evidence.json>] [--dataset <id>]\n" +
       "  mso compare <fixture.jsonl> [--providers replay,laya,clef-flash] [--out <comparison.json>] [--dataset <id>]\n" +
+      "  mso dm-bakeoff <fixture.jsonl> --providers <csv> --incumbent <provider-id> --policy <policy.json> [--out <evidence.json>] [--dataset <id>]\n" +
       "  mso disagreements <fixture.jsonl> [--providers replay,laya,clef-flash] [--pair laya:clef-flash] [--focus clef-flash] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
@@ -1430,6 +1436,58 @@ const main = async (): Promise<void> => {
     );
     console.log(`summary=${summaryPath}`);
     console.log(`queue=${queuePath}`);
+    return;
+  }
+
+  if (command === "dm-bakeoff") {
+    const providerNames = (optionValue(args, "--providers") ?? "replay,laya")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (providerNames.length < 2) {
+      throw new Error("--providers requires at least two comma-separated providers");
+    }
+
+    const incumbentProviderId = requiredOption(args, "--incumbent");
+    if (!providerNames.includes(incumbentProviderId)) {
+      throw new Error("--incumbent must be included in --providers");
+    }
+
+    const policy = parseShadowBakeoffPolicy(
+      await readJson(requiredOption(args, "--policy")),
+    );
+    const providers: SystemOneProvider[] = [];
+    for (const name of providerNames) {
+      providers.push(await createProvider(name, loaded.cases, args));
+    }
+
+    const scoreAgreementTolerance = numericOption(args, "--score-tolerance");
+    const evidence = await runCrossProviderBakeoff(
+      providers,
+      loaded.cases,
+      {
+        datasetId,
+        incumbentProviderId,
+        policy,
+        ...(scoreAgreementTolerance === undefined
+          ? {}
+          : { scoreAgreementTolerance }),
+      },
+    );
+    const outPath =
+      optionValue(args, "--out") ??
+      `evidence/dm/${evidence.bakeoffId}.json`;
+    await writeCrossProviderBakeoffEvidence(outPath, evidence);
+
+    for (const assessment of evidence.assessments) {
+      console.log(
+        `provider=${assessment.providerId} readiness=${assessment.readiness} accuracy=${(assessment.offline.accuracy * 100).toFixed(1)}% ece10=${assessment.offline.calibration.ece10.toFixed(4)} coverage=${(assessment.offline.calibration.coverage * 100).toFixed(1)}% errors=${assessment.offline.providerErrors}`,
+      );
+    }
+    console.log(
+      `shadow_candidates=${evidence.shadowCandidates.join(",") || "none"} automatic_selection=false runtime_authority_change=false`,
+    );
+    console.log(`evidence=${outPath}`);
     return;
   }
 

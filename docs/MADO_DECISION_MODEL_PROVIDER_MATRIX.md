@@ -123,22 +123,12 @@ These numbers are registry metadata only. They are not hard-wired into runtime c
 - https://developers.cloudflare.com/workers-ai/platform/pricing/
 - https://huggingface.co/Cloudflare/clef
 
+## M0.1 bake-off bridge
+
+MSO-DM-M0.1 is implemented in `src/eval/bakeoff.ts` and `docs/MADO_DECISION_MODEL_BAKEOFF_RUNBOOK.md`.
+
+It reuses the existing comparison spine, adds correctness-alignment calibration with explicit confidence provenance, and emits policy-gated non-authoritative SHADOW plans. It does not introduce a second promotion lifecycle.
+
 ## Next gate
 
-MSO-DM-M0.1 should use the existing comparison, Disagreement Lab, Shadow Bridge, and Promotion Gate rather than inventing a second lifecycle.
-
-The next useful evidence set is:
-
-```text
-same fixture
-  -> Laya
-  -> Clef-flash
-  -> Clef
-  -> pairwise disagreement
-  -> pattern slices
-  -> latency / provider errors
-  -> calibration review
-  -> SHADOW only
-```
-
-The aim is not to crown one universal winner. It is to learn which provider is suitable for which System One pattern and workload.
+MSO-DM-M0.2 should let one incumbent feed multiple shadow providers inside one shared evidence session so Laya, Clef, Clef-flash, and future Jev adapters can observe identical live requests with one review queue.

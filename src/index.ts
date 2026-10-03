@@ -12,6 +12,7 @@ export * from "./providers/matrix.js";
 export * from "./providers/replay.js";
 export * from "./eval/skeleton.js";
 export * from "./eval/compare.js";
+export * from "./eval/bakeoff.js";
 export * from "./eval/disagreement.js";
 export * from "./shadow/bridge.js";
 export * from "./promotion/gate.js";
