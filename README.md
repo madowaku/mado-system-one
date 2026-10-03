@@ -782,6 +782,53 @@ For a single candidate, the original `ShadowBridge` remains the simpler primitiv
 
 See `docs/MADO_MULTI_SHADOW_SESSION_RUNBOOK.md`.
 
+## Provider Evidence Ledger / Longitudinal Decision Memory
+
+MSO-DM-M0.3 gives each decision surface an append-only memory of how providers actually behaved over time.
+
+It compacts M0.2 sessions into provider observations without copying raw prompt/state text, then joins later `mso.review.v0` labels back onto the observed questions.
+
+~~~text
+shared sessions
+   |
+   +--> latency / errors / cost
+   +--> agreement / disagreement
+   +--> confidence evidence
+   +--> pattern + task-family slices
+   |
+human reviews
+   |
+   v
+Provider Evidence Ledger
+   |
+   +--> disagreement clusters
+   +--> reviewed accuracy
+   +--> event timeline
+   +--> per-provider history
+~~~
+
+The ledger is SHA-256 hash chained, writer locked, atomically replaced on mutation, rejects duplicate sessions/reviews, and rejects review labels with no matching shadow observation.
+
+~~~bash
+npm run mso -- provider-ledger-init \
+  --ledger evidence/provider-ledger/asset-qa.json \
+  --ledger-id asset-qa-provider-memory \
+  --surface asset.qa
+
+npm run mso -- provider-ledger-ingest-sessions \
+  --ledger evidence/provider-ledger/asset-qa.json \
+  --sessions evidence/multi-shadow/sessions.jsonl \
+  --source-ref multi-shadow:asset-qa:2026-10-03
+
+npm run mso -- provider-ledger-show \
+  --ledger evidence/provider-ledger/asset-qa.json \
+  --provider clef-flash
+~~~
+
+Every derived state records `runtimeAuthorityManaged=false` and `automaticRoutingDecision=false`. The ledger remembers evidence; it does not pick a winner.
+
+See `docs/MADO_PROVIDER_EVIDENCE_LEDGER_RUNBOOK.md`.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -814,7 +861,8 @@ See `docs/MADO_MULTI_SHADOW_SESSION_RUNBOOK.md`.
 - **MSO-DM-M0.0** Decision Model Provider Matrix / Clef Intake ✅
 - **MSO-DM-M0.1** Cross-Provider Calibration / Shadow Bake-off ✅
 - **MSO-DM-M0.2** Multi-Shadow Session / Shared Evidence ✅
-- **MSO-DM-M0.3** Provider Evidence Ledger / Longitudinal Decision Memory
+- **MSO-DM-M0.3** Provider Evidence Ledger / Longitudinal Decision Memory ✅
+- **MSO-DM-M0.4** Provider Evidence Retrieval / Suitability Context Pack
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

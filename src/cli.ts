@@ -102,6 +102,18 @@ import {
   writeExtractedShadowTraces,
 } from "./shadow/multi.js";
 import {
+  createProviderEvidenceLedger,
+  deriveProviderEvidenceState,
+  ingestMultiShadowSessions,
+  ingestProviderReviews,
+} from "./evidence/provider-ledger.js";
+import {
+  createProviderEvidenceLedgerFile,
+  mutateProviderEvidenceLedger,
+  readProviderEvidenceLedger,
+  writeProviderEvidenceSnapshot,
+} from "./evidence/provider-ledger-io.js";
+import {
   createLayaCheckpointProvider,
   createLayaTsProvider,
 } from "./providers/laya.js";
@@ -144,6 +156,10 @@ const usage = (): never => {
       "  mso compare <fixture.jsonl> [--providers replay,laya,clef-flash] [--out <comparison.json>] [--dataset <id>]\n" +
       "  mso dm-bakeoff <fixture.jsonl> --providers <csv> --incumbent <provider-id> --policy <policy.json> [--out <evidence.json>] [--dataset <id>]\n" +
       "  mso multi-shadow-extract --sessions <sessions.jsonl> --provider <provider-id> --out <shadow.jsonl>\n" +
+      "  mso provider-ledger-init --ledger <ledger.json> --ledger-id <id> --surface <decision-surface>\n" +
+      "  mso provider-ledger-ingest-sessions --ledger <ledger.json> --sessions <sessions.jsonl> --source-ref <ref> [--task-family <name>]\n" +
+      "  mso provider-ledger-ingest-reviews --ledger <ledger.json> --reviews <reviews.jsonl> --source-ref <ref>\n" +
+      "  mso provider-ledger-show --ledger <ledger.json> [--provider <provider-id>] [--out <snapshot.json>]\n" +
       "  mso disagreements <fixture.jsonl> [--providers replay,laya,clef-flash] [--pair laya:clef-flash] [--focus clef-flash] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
@@ -1249,9 +1265,121 @@ const runBaselineShow = async (
   console.log(JSON.stringify(deriveBaselineLineageState(registry), null, 2));
 };
 
+const runProviderLedgerInit = async (
+  args: readonly string[],
+): Promise<void> => {
+  const path = requiredOption(args, "--ledger");
+  const ledger = createProviderEvidenceLedger(
+    requiredOption(args, "--ledger-id"),
+    requiredOption(args, "--surface"),
+  );
+  await createProviderEvidenceLedgerFile(path, ledger);
+  console.log(
+    `ledger=${ledger.registryId} surface=${ledger.decisionSurface} events=0`,
+  );
+  console.log(`path=${path}`);
+};
+
+const runProviderLedgerIngestSessions = async (
+  args: readonly string[],
+): Promise<void> => {
+  const path = requiredOption(args, "--ledger");
+  const sessionsPath = requiredOption(args, "--sessions");
+  const sourceRef = requiredOption(args, "--source-ref");
+  const taskFamilyFallback = optionValue(args, "--task-family");
+  const sessions = parseMultiShadowSessionJsonl(
+    await readFile(sessionsPath, "utf8"),
+  );
+
+  const next = await mutateProviderEvidenceLedger(path, (ledger) =>
+    ingestMultiShadowSessions(ledger, sessions, {
+      sourceRef,
+      ...(taskFamilyFallback ? { taskFamilyFallback } : {}),
+    }),
+  );
+  const state = deriveProviderEvidenceState(next);
+  console.log(
+    `sessions=${sessions.length} ledger_sessions=${state.sessionCount} providers=${Object.keys(state.providers).length} events=${state.eventCount}`,
+  );
+};
+
+const runProviderLedgerIngestReviews = async (
+  args: readonly string[],
+): Promise<void> => {
+  const path = requiredOption(args, "--ledger");
+  const reviewsPath = requiredOption(args, "--reviews");
+  const sourceRef = requiredOption(args, "--source-ref");
+  const reviews = parsePromotionReviewJsonl(
+    await readFile(reviewsPath, "utf8"),
+  );
+
+  const next = await mutateProviderEvidenceLedger(path, (ledger) =>
+    ingestProviderReviews(ledger, reviews, { sourceRef }),
+  );
+  const state = deriveProviderEvidenceState(next);
+  console.log(
+    `reviews=${reviews.length} ledger_reviews=${state.reviewCount} events=${state.eventCount}`,
+  );
+};
+
+const runProviderLedgerShow = async (
+  args: readonly string[],
+): Promise<void> => {
+  const ledger = await readProviderEvidenceLedger(
+    requiredOption(args, "--ledger"),
+  );
+  const state = deriveProviderEvidenceState(ledger);
+  const providerId = optionValue(args, "--provider");
+  if (providerId && !state.providers[providerId]) {
+    throw new Error(`provider not found in ledger: ${providerId}`);
+  }
+
+  const outPath = optionValue(args, "--out");
+  if (outPath) {
+    await writeProviderEvidenceSnapshot(outPath, state);
+    console.log(`snapshot=${outPath}`);
+  }
+
+  console.log(
+    JSON.stringify(
+      providerId
+        ? {
+            registryId: state.registryId,
+            decisionSurface: state.decisionSurface,
+            provider: state.providers[providerId],
+            runtimeAuthorityManaged: state.runtimeAuthorityManaged,
+            automaticRoutingDecision: state.automaticRoutingDecision,
+          }
+        : state,
+      null,
+      2,
+    ),
+  );
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
+
+  if (command === "provider-ledger-init") {
+    await runProviderLedgerInit(args);
+    return;
+  }
+
+  if (command === "provider-ledger-ingest-sessions") {
+    await runProviderLedgerIngestSessions(args);
+    return;
+  }
+
+  if (command === "provider-ledger-ingest-reviews") {
+    await runProviderLedgerIngestReviews(args);
+    return;
+  }
+
+  if (command === "provider-ledger-show") {
+    await runProviderLedgerShow(args);
+    return;
+  }
 
   if (command === "baseline-lineage-init") {
     await runBaselineLineageInit(args);
