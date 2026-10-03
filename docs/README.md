@@ -26,6 +26,9 @@ This directory contains the canonical design documents for MADO System One.
 8. **MADO_MULTI_SHADOW_SESSION_RUNBOOK.md / MSO-DM-M0.2**  
    One-incumbent / many-shadow runtime observation, shared evidence sessions, one review queue, and Promotion Gate-compatible extraction.
 
+9. **MADO_PROVIDER_EVIDENCE_LEDGER_RUNBOOK.md / MSO-DM-M0.3**  
+   Hash-chained longitudinal provider memory for latency, errors, cost, disagreement clusters, confidence, reviewed outcomes, and pattern/task-family slices.
+
 Architecture should move slowly. The Pattern Atlas can absorb fast-moving application experiments. Operations defines how a decision surface earns trust. Context Plane work should remain recall-first and reversible.
 
 

@@ -223,21 +223,14 @@ labelsKnown = false
 
 There is no voting, ensemble authority, majority decision, automatic fallback, or automatic activation.
 
+## M0.3 handoff
+
+MSO-DM-M0.3 implements the Provider Evidence Ledger.
+
+Shared sessions can now be compacted into hash-chained provider history, and later human / verified reviews can be joined back to the original shadow questions without rewriting observation events.
+
+See `MADO_PROVIDER_EVIDENCE_LEDGER_RUNBOOK.md`.
+
 ## Next milestone
 
-MSO-DM-M0.3 should turn shared sessions into longitudinal provider evidence:
-
-```text
-sessions
-  |
-  +--> per-provider latency / errors
-  +--> disagreement clusters
-  +--> reviewed accuracy
-  +--> pattern drift
-  +--> provider cost
-  |
-  v
-Provider Evidence Ledger
-```
-
-That creates a durable history for deciding which Decision Model belongs on which decision surface without collapsing the system into one universal ranking.
+MSO-DM-M0.4 should retrieve only the relevant pattern / task-family portions of provider history and materialize a bounded Provider Suitability Context Pack. The pack remains evidence-only and must not activate or rank providers on its own.
