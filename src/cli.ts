@@ -114,6 +114,12 @@ import {
   writeProviderEvidenceSnapshot,
 } from "./evidence/provider-ledger-io.js";
 import {
+  buildProviderSuitabilityContextPack,
+} from "./evidence/provider-retrieval.js";
+import {
+  writeProviderSuitabilityContextPack,
+} from "./evidence/provider-retrieval-io.js";
+import {
   createLayaCheckpointProvider,
   createLayaTsProvider,
 } from "./providers/laya.js";
@@ -160,6 +166,7 @@ const usage = (): never => {
       "  mso provider-ledger-ingest-sessions --ledger <ledger.json> --sessions <sessions.jsonl> --source-ref <ref> [--task-family <name>]\n" +
       "  mso provider-ledger-ingest-reviews --ledger <ledger.json> --reviews <reviews.jsonl> --source-ref <ref>\n" +
       "  mso provider-ledger-show --ledger <ledger.json> [--provider <provider-id>] [--out <snapshot.json>]\n" +
+      "  mso provider-context --ledger <ledger.json> --pattern <pattern> --out <context.json> [--task-family <name>] [--providers <csv>] [--max-providers <n>] [--max-windows <n>] [--max-clusters <n>]\n" +
       "  mso disagreements <fixture.jsonl> [--providers replay,laya,clef-flash] [--pair laya:clef-flash] [--focus clef-flash] [--out <summary.json>] [--queue <review.jsonl>]\n" +
       "  mso promotion-check --policy <policy.json> --eval <eval.json> [--shadow <shadow.jsonl>] [--reviews <reviews.jsonl>] [--controls <controls.json>] [--out <gate.json>]\n" +
       "  mso finetune-pack --queue <disagreements.jsonl> --annotations <annotations.jsonl> --out-dir <dir> [--validation-fraction <0..0.5>] [--split-seed <text>]\n" +
@@ -1265,6 +1272,27 @@ const runBaselineShow = async (
   console.log(JSON.stringify(deriveBaselineLineageState(registry), null, 2));
 };
 
+const parseSystemOnePattern = (value: string): SystemOnePattern => {
+  const allowed: readonly SystemOnePattern[] = [
+    "route",
+    "compute",
+    "rank",
+    "gate",
+    "act",
+    "score",
+    "abstain",
+    "sieve",
+    "walk",
+    "verify",
+  ];
+  if (!allowed.includes(value as SystemOnePattern)) {
+    throw new Error(
+      `--pattern must be one of: ${allowed.join(",")}`,
+    );
+  }
+  return value as SystemOnePattern;
+};
+
 const runProviderLedgerInit = async (
   args: readonly string[],
 ): Promise<void> => {
@@ -1357,9 +1385,61 @@ const runProviderLedgerShow = async (
   );
 };
 
+const runProviderContext = async (
+  args: readonly string[],
+): Promise<void> => {
+  const ledger = await readProviderEvidenceLedger(
+    requiredOption(args, "--ledger"),
+  );
+  const providerCsv = optionValue(args, "--providers");
+  const providerIds = providerCsv
+    ? providerCsv
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : undefined;
+  const maxProviders = numericOption(args, "--max-providers");
+  const maxRecentWindowsPerProvider = numericOption(args, "--max-windows");
+  const maxDisagreementClustersPerProvider = numericOption(
+    args,
+    "--max-clusters",
+  );
+  const taskFamily = optionValue(args, "--task-family");
+
+  const pack = buildProviderSuitabilityContextPack(ledger, {
+    pattern: parseSystemOnePattern(requiredOption(args, "--pattern")),
+    ...(taskFamily ? { taskFamily } : {}),
+    ...(providerIds ? { providerIds } : {}),
+    ...(maxProviders === undefined ? {} : { maxProviders }),
+    ...(maxRecentWindowsPerProvider === undefined
+      ? {}
+      : { maxRecentWindowsPerProvider }),
+    ...(maxDisagreementClustersPerProvider === undefined
+      ? {}
+      : { maxDisagreementClustersPerProvider }),
+  });
+  const outPath = requiredOption(args, "--out");
+  await writeProviderSuitabilityContextPack(outPath, pack);
+
+  console.log(
+    `pack=${pack.packId} pattern=${pack.query.pattern} task_family=${pack.query.taskFamily ?? "none"} providers=${pack.providers.length} ranking=false routing=false`,
+  );
+  for (const provider of pack.providers) {
+    console.log(
+      `provider=${provider.providerId} match=${provider.matchScope} status=${provider.evidenceStatus} exact_observations=${provider.exactContext.metrics.observations} reviewed=${provider.exactContext.metrics.reviewedQuestions}`,
+    );
+  }
+  console.log(`context=${outPath}`);
+};
+
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const command = args[0];
+
+  if (command === "provider-context") {
+    await runProviderContext(args);
+    return;
+  }
 
   if (command === "provider-ledger-init") {
     await runProviderLedgerInit(args);

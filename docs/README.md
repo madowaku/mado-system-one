@@ -29,6 +29,9 @@ This directory contains the canonical design documents for MADO System One.
 9. **MADO_PROVIDER_EVIDENCE_LEDGER_RUNBOOK.md / MSO-DM-M0.3**  
    Hash-chained longitudinal provider memory for latency, errors, cost, disagreement clusters, confidence, reviewed outcomes, and pattern/task-family slices.
 
+10. **MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md / MSO-DM-M0.4**  
+    Bounded evidence retrieval by pattern/task-family with ledger-head pinning, no implicit provider truncation, and evidence-only Suitability Context Packs.
+
 Architecture should move slowly. The Pattern Atlas can absorb fast-moving application experiments. Operations defines how a decision surface earns trust. Context Plane work should remain recall-first and reversible.
 
 
