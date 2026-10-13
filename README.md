@@ -914,3 +914,16 @@ See `docs/MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md`.
 ## Status
 
 The project has moved from a single decision layer toward a provider-aware decision + context plane architecture. Interfaces and thresholds remain experimental until validated on MADO workloads.
+
+
+## MSO-DM-M0.5 Sarashina Japanese Retrieval Benchmark
+
+A task-specific Sarashina3 embedding/rerank client and Japanese game-document retrieval harness are available in src/providers/sarashina.ts and src/eval/sarashina-ja.ts. The task is retrieval quality, **not** typed System One decisions. Relevance scores cannot be treated as calibrated probabilities or policy authorization. M0.3/M0.4 ledgers retain their existing typed-decision schema.
+
+Offline smoke (no key, no network):
+
+    npm run sarashina:ja -- fixtures/dm/sarashina-ja.example.jsonl --dataset mso-ja-game-v0 --out evidence/dm/sarashina-ja.json
+
+Live runs require an explicit --mode embedding-rerank --live plus SARASHINA_API_KEY. Only submit public or synthetic text until the service terms and data privacy are reviewed. Evidence contains ranking IDs, metrics and safe error categories but no raw prompts or API keys.
+
+See docs/MADO_SARASHINA_JAPANESE_BENCHMARK_RUNBOOK.md for capabilities, known limits, the opt-in procedure and follow-up gates.

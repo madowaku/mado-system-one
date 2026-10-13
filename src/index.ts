@@ -9,6 +9,8 @@ export * from "./providers/mock.js";
 export * from "./providers/laya.js";
 export * from "./providers/clef.js";
 export * from "./providers/matrix.js";
+export * from "./providers/sarashina.js";
+export * from "./eval/sarashina-ja.js";
 export * from "./providers/replay.js";
 export * from "./eval/skeleton.js";
 export * from "./eval/compare.js";
