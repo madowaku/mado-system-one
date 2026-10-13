@@ -21,3 +21,5 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm test
+      - name: Offline Sarashina Japanese retrieval smoke
+        run: npm run sarashina:ja -- fixtures/dm/sarashina-ja.example.jsonl --dataset mso-ja-game-v0 --out evidence/dm/sarashina-ja-smoke.json
