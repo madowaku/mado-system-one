@@ -867,6 +867,14 @@ Every pack records `evidenceOnly=true`, `automaticProviderRanking=false`, `autom
 
 See `docs/MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md`.
 
+## Free Coding Agent Qualification / MSO-DM-M0.6
+
+The OpenCode DeepSeek free-tier coding-agent lab is an offline, evidence-only bake-off, separate from typed-decision adapters. Synthetic samples cannot qualify a provider, and real qualification requires paired public tasks, independent test/review evidence, privacy approval, and actual billing references. It never changes routing or production authority.
+
+    npm run dm:free-qualify -- --input fixtures/dm/free-deepseek.synthetic.json --out evidence/dm/free-deepseek.synthetic.result.json
+
+See docs/MADO_FREE_CODING_AGENT_QUALIFICATION_RUNBOOK.md.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -902,6 +910,7 @@ See `docs/MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md`.
 - **MSO-DM-M0.3** Provider Evidence Ledger / Longitudinal Decision Memory ✅
 - **MSO-DM-M0.4** Provider Evidence Retrieval / Suitability Context Pack ✅
 - **MSO-DM-M0.5** Evidence-Aware Router Policy / Explainable Provider Selection
+- **MSO-DM-M0.6** Free DeepSeek Qualification / Zero-Cost Coding Agent Lab ✅
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

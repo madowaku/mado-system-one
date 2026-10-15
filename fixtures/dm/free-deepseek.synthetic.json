@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "mso.coding-qualification-input.v0",
+  "datasetId": "synthetic-free-agent-smoke",
+  "candidateId": "opencode/deepseek-v4.1-flash-free",
+  "incumbentId": "codex-reference",
+  "catalogProof": {
+    "modelId": "deepseek-v4.1-flash-free",
+    "sourceRef": "https://opencode.ai/zen/v1/models",
+    "checkedAt": "2026-10-15T12:00:00.000Z",
+    "available": true,
+    "pricing": "unverified"
+  },
+  "operatorReview": {
+    "isolationApproved": false,
+    "dataHandlingApproved": false,
+    "approvalRef": "example-only:no-operator-approval"
+  },
+  "policy": {
+    "minLivePairs": 4,
+    "minLiveTaskFamilies": 2,
+    "minVerifiedPassRate": 0.8,
+    "maxRegressionRate": 0.1,
+    "maxP95ElapsedMs": 120000,
+    "maxTotalBilledUsd": 0,
+    "maxCatalogAgeHours": 24
+  },
+  "cases": [
+    {
+      "id": "godot-state-test",
+      "taskFamily": "godot",
+      "exposure": "public_synthetic",
+      "artifactRef": "fixture:godot-state-test"
+    },
+    {
+      "id": "ts-boundary-test",
+      "taskFamily": "typescript",
+      "exposure": "public_synthetic",
+      "artifactRef": "fixture:ts-boundary-test"
+    }
+  ],
+  "runs": [
+    {
+      "caseId": "godot-state-test",
+      "providerId": "opencode/deepseek-v4.1-flash-free",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "example:test:godot-state-test",
+      "reviewEvidenceRef": "example:review:godot-state-test",
+      "artifactRef": "example:artifact:godot-state-test",
+      "elapsedMs": 2000,
+      "billedUsd": null
+    },
+    {
+      "caseId": "godot-state-test",
+      "providerId": "codex-reference",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "example:test:godot-state-test",
+      "reviewEvidenceRef": "example:review:godot-state-test",
+      "artifactRef": "example:artifact:godot-state-test",
+      "elapsedMs": 2000,
+      "billedUsd": null
+    },
+    {
+      "caseId": "ts-boundary-test",
+      "providerId": "opencode/deepseek-v4.1-flash-free",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "example:test:ts-boundary-test",
+      "reviewEvidenceRef": "example:review:ts-boundary-test",
+      "artifactRef": "example:artifact:ts-boundary-test",
+      "elapsedMs": 2000,
+      "billedUsd": null
+    },
+    {
+      "caseId": "ts-boundary-test",
+      "providerId": "codex-reference",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "example:test:ts-boundary-test",
+      "reviewEvidenceRef": "example:review:ts-boundary-test",
+      "artifactRef": "example:artifact:ts-boundary-test",
+      "elapsedMs": 2000,
+      "billedUsd": null
+    }
+  ],
+  "evaluatedAt": "2026-10-15T13:00:00.000Z"
+}
