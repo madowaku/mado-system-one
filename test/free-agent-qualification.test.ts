@@ -28,6 +28,7 @@ const makeInput = (): CodingQualificationInput => {
   return {
     schemaVersion: "mso.coding-qualification-input.v0",
     datasetId: "public-two-case-live",
+    evaluatedAt: "2026-10-15T13:00:00.000Z",
     candidateId,
     incumbentId,
     catalogProof: {
@@ -49,6 +50,7 @@ const makeInput = (): CodingQualificationInput => {
       maxRegressionRate: 0,
       maxP95ElapsedMs: 30000,
       maxTotalBilledUsd: 0,
+      maxCatalogAgeHours: 24,
     },
     cases: [
       { id: "godot-logic", taskFamily: "godot", exposure: "approved_public", artifactRef: "fixture:godot" },
@@ -148,4 +150,13 @@ test("sourceRefs never include raw prompt or code and stable evidence is reprodu
   assert.deepEqual(a, b);
   assert.ok(a.sourceRefs.includes("operator:approved-public-benchmark-001"));
   assert.equal(JSON.stringify(a).includes("secret"), false);
+});
+
+test("stale or future price proof cannot qualify even when runs are free", () => {
+  const stale = makeInput();
+  stale.catalogProof.checkedAt = "2026-10-01T12:00:00.000Z";
+  assert.equal(qualifyFreeCodingAgent(stale).decision, "blocked");
+  const future = makeInput();
+  future.catalogProof.checkedAt = "2026-10-16T12:00:00.000Z";
+  assert.equal(qualifyFreeCodingAgent(future).decision, "blocked");
 });
