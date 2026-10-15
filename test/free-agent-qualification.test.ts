@@ -87,7 +87,7 @@ test("unverified bill or price blocks zero-cost qualification", () => {
   const input = makeInput();
   const candidate = input.runs[0];
   assert.ok(candidate);
-  candidate.billingEvidenceRef = undefined;
+  delete candidate.billingEvidenceRef;
   assert.equal(qualifyFreeCodingAgent(input).decision, "blocked");
   const paid = makeInput();
   paid.catalogProof.pricing = "paid";
