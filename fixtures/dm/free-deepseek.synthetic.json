@@ -21,7 +21,8 @@
     "minVerifiedPassRate": 0.8,
     "maxRegressionRate": 0.1,
     "maxP95ElapsedMs": 120000,
-    "maxTotalBilledUsd": 0
+    "maxTotalBilledUsd": 0,
+    "maxCatalogAgeHours": 24
   },
   "cases": [
     {
@@ -86,5 +87,6 @@
       "elapsedMs": 2000,
       "billedUsd": null
     }
-  ]
+  ],
+  "evaluatedAt": "2026-10-15T13:00:00.000Z"
 }
