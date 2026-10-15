@@ -22,7 +22,7 @@ The checked-in fixture is deliberately synthetic, with unverified pricing and no
 
 ## Preparing a real paired bake-off
 
-1. Confirm availability using OpenCode's `opencode models` list and the Zen catalog. Select `opencode/deepseek-v4.1-flash-free` exactly, not `opencode/deepseek-v4.1-flash`. Check price and terms separately and record an auditable pricing snapshot reference plus UTC checkedAt timestamp.
+1. Confirm availability using OpenCode's `opencode models` list and the Zen catalog. Select `opencode/deepseek-v4.1-flash-free` exactly, not `opencode/deepseek-v4.1-flash`. Check price and terms separately and record an auditable pricing snapshot reference plus UTC checkedAt timestamp. Set evaluatedAt explicitly for a deterministic comparison, and reject price attestations older than policy.maxCatalogAgeHours.
 2. Prepare at least four PUBLIC or explicitly approved tasks, across at least two task families. Suggested groups: TypeScript refactor/tests, Godot logic/state verification, error-handling patch, documentation with automated checks. Pre-register expected tests and independent human review rubric. Never use private production repositories, credentials or unpublished assets in the initial free-tier trial.
 3. Run both agents on IDENTICAL task snapshots in separate disposable workspaces, under the same time/tool budget. Do not give either agent write access to secrets or production resources. Restrict tools and review commands before execution. Example **manual** OpenCode invocation inside such a workspace:
 
@@ -44,7 +44,7 @@ Store the report as a PR/check artifact, not as production routing configuration
 - Each run records provenance=synthetic|live, testStatus, reviewStatus, evidence references for passes, artifactRef, elapsedMs, billedUsd (number or null), and billingEvidenceRef for bill verification.
 - A successful run requires BOTH tests and independent human review with references. Unreviewed model output is not accepted as a success.
 - Only paired LIVE runs on approved_public tasks contribute to qualification. Synthetic cases may test the harness but never satisfy minimum evidence.
-- Default sample policy: minLivePairs=4, minLiveTaskFamilies=2, minVerifiedPassRate=0.8, maxRegressionRate=0.1, maxP95ElapsedMs=120000, maxTotalBilledUsd=0. Policy bounds are provisional, NOT empirically validated.
+- Default sample policy: minLivePairs=4, minLiveTaskFamilies=2, minVerifiedPassRate=0.8, maxRegressionRate=0.1, maxP95ElapsedMs=120000, maxTotalBilledUsd=0, maxCatalogAgeHours=24. Policy bounds are provisional, NOT empirically validated.
 - The exact free ID, catalog availability and pricing attestation, data handling approval, task coverage, quality, regressions, speed, full cost evidence and real billed spend all gate eligibility.
 - A passing result is eligible_for_shadow only. The evaluator **never** selects a live provider, merges a PR, or gives an agent decision/production authority. Its evidence declares automaticRoutingDecision=false, automaticProviderPromotion=false and productionAuthorityChange=false.
 - Reports are reproducible, deterministic for a fixed input, and intentionally contain only sanitized evidence pointers. Operator-provided proof references are assertions and must be externally audited. This lab does not cryptographically verify invoices or guarantee a vendor's future tariff.
