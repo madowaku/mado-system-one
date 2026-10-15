@@ -35,6 +35,7 @@ export interface FreeAgentPolicy {
   maxRegressionRate: number;
   maxP95ElapsedMs: number;
   maxTotalBilledUsd: number;
+  maxCatalogAgeHours: number;
 }
 
 export interface CatalogProof {
@@ -50,6 +51,7 @@ export interface CodingQualificationInput {
   datasetId: string;
   incumbentId: string;
   candidateId: string;
+  evaluatedAt: string;
   catalogProof: CatalogProof;
   operatorReview: {
     isolationApproved: boolean;
@@ -72,6 +74,7 @@ export interface CodingQualificationEvidence {
   datasetId: string;
   candidateId: string;
   incumbentId: string;
+  evaluatedAt: string;
   decision: "eligible_for_shadow" | "blocked" | "insufficient_evidence";
   observedPairs: number;
   eligibleLivePairs: number;
@@ -139,11 +142,15 @@ const array = (value: unknown, label: string): unknown[] => {
 
 export const parseCodingQualificationInput = (value: unknown): CodingQualificationInput => {
   const input = asRecord(value, "input");
-  allowed(input, ["schemaVersion", "datasetId", "candidateId", "incumbentId", "catalogProof", "operatorReview", "policy", "cases", "runs"], "input");
+  allowed(input, ["schemaVersion", "datasetId", "candidateId", "incumbentId", "evaluatedAt", "catalogProof", "operatorReview", "policy", "cases", "runs"], "input");
   if (input.schemaVersion !== "mso.coding-qualification-input.v0") {
     throw new Error("unsupported coding qualification input schema");
   }
   const datasetId = nonblank(input.datasetId, "datasetId");
+  const evaluatedAt = nonblank(input.evaluatedAt, "evaluatedAt");
+  if (!/^\\d{4}-\\d{2}-\\d{2}T/.test(evaluatedAt) || !Number.isFinite(Date.parse(evaluatedAt))) {
+    throw new Error("evaluatedAt must be an ISO timestamp");
+  }
   const candidateId = nonblank(input.candidateId, "candidateId");
   const incumbentId = nonblank(input.incumbentId, "incumbentId");
   if (candidateId === incumbentId) throw new Error("candidate and incumbent must differ");
@@ -169,7 +176,7 @@ export const parseCodingQualificationInput = (value: unknown): CodingQualificati
     approvalRef: nonblank(operator.approvalRef, "operatorReview.approvalRef"),
   };
   const policyInput = asRecord(input.policy, "policy");
-  allowed(policyInput, ["minLivePairs", "minLiveTaskFamilies", "minVerifiedPassRate", "maxRegressionRate", "maxP95ElapsedMs", "maxTotalBilledUsd"], "policy");
+  allowed(policyInput, ["minLivePairs", "minLiveTaskFamilies", "minVerifiedPassRate", "maxRegressionRate", "maxP95ElapsedMs", "maxTotalBilledUsd", "maxCatalogAgeHours"], "policy");
   const minLivePairs = numberIn(policyInput.minLivePairs, "minLivePairs", 1);
   const minLiveTaskFamilies = numberIn(policyInput.minLiveTaskFamilies, "minLiveTaskFamilies", 1);
   if (!Number.isInteger(minLivePairs) || !Number.isInteger(minLiveTaskFamilies)) {
@@ -182,6 +189,7 @@ export const parseCodingQualificationInput = (value: unknown): CodingQualificati
     maxRegressionRate: numberIn(policyInput.maxRegressionRate, "maxRegressionRate", 0, 1),
     maxP95ElapsedMs: numberIn(policyInput.maxP95ElapsedMs, "maxP95ElapsedMs", 0),
     maxTotalBilledUsd: numberIn(policyInput.maxTotalBilledUsd, "maxTotalBilledUsd", 0),
+    maxCatalogAgeHours: numberIn(policyInput.maxCatalogAgeHours, "maxCatalogAgeHours", 0, 168),
   };
   const caseIds = new Set<string>();
   const cases: CodingCase[] = array(input.cases, "cases").map((raw, index) => {
@@ -231,7 +239,7 @@ export const parseCodingQualificationInput = (value: unknown): CodingQualificati
   });
   return {
     schemaVersion: "mso.coding-qualification-input.v0",
-    datasetId, candidateId, incumbentId, catalogProof, operatorReview, policy, cases, runs,
+    datasetId, candidateId, incumbentId, evaluatedAt, catalogProof, operatorReview, policy, cases, runs,
   };
 };
 
@@ -289,6 +297,9 @@ export const qualifyFreeCodingAgent = (input: CodingQualificationInput): CodingQ
     validated.catalogProof.available &&
     validated.catalogProof.pricing === "free",
     "Require the exact free-tier model ID and operator-checked pricing, not the paid alias");
+  const catalogAgeHours = (Date.parse(validated.evaluatedAt) - Date.parse(validated.catalogProof.checkedAt)) / 3_600_000;
+  add("catalog_proof_freshness", catalogAgeHours >= 0 && catalogAgeHours <= validated.policy.maxCatalogAgeHours,
+    "Free-tier price attestation must be current and not from the future");
   add("operator_data_and_isolation_approval",
     validated.operatorReview.isolationApproved && validated.operatorReview.dataHandlingApproved,
     "Only approved public workloads in isolated disposable workspaces");
@@ -329,6 +340,7 @@ export const qualifyFreeCodingAgent = (input: CodingQualificationInput): CodingQ
     datasetId: validated.datasetId,
     candidateId: validated.candidateId,
     incumbentId: validated.incumbentId,
+    evaluatedAt: validated.evaluatedAt,
     decision,
     observedPairs: paired.length,
     eligibleLivePairs: count,
