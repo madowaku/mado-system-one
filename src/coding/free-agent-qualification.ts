@@ -148,7 +148,7 @@ export const parseCodingQualificationInput = (value: unknown): CodingQualificati
   }
   const datasetId = nonblank(input.datasetId, "datasetId");
   const evaluatedAt = nonblank(input.evaluatedAt, "evaluatedAt");
-  if (!/^\\d{4}-\\d{2}-\\d{2}T/.test(evaluatedAt) || !Number.isFinite(Date.parse(evaluatedAt))) {
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(evaluatedAt) || !Number.isFinite(Date.parse(evaluatedAt))) {
     throw new Error("evaluatedAt must be an ISO timestamp");
   }
   const candidateId = nonblank(input.candidateId, "candidateId");
