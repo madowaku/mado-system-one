@@ -36,3 +36,6 @@ Architecture should move slowly. The Pattern Atlas can absorb fast-moving applic
 
 
 Multi-Agent Forge is an orchestration protocol above the existing planes, not a replacement for System One, Harness, Evidence, Policy, or Verifier.
+
+11. **MADO_FREE_CODING_AGENT_QUALIFICATION_RUNBOOK.md / MSO-DM-M0.6**  
+    Offline, evidence-only free DeepSeek coding-agent benchmark, paired verification, billing proof and data-safety gates.
