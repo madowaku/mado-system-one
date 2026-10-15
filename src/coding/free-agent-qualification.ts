@@ -304,8 +304,10 @@ export const qualifyFreeCodingAgent = (input: CodingQualificationInput): CodingQ
     "Candidate p95 end-to-end elapsed milliseconds");
   add("cost_evidence_coverage", count === 0 ? null : billingCoverage === count,
     "Each live candidate run requires a billing reference AND an actual billed amount");
-  add("total_billed_usd", totalCost === null ? null : totalCost <= validated.policy.maxTotalBilledUsd,
+  add("total_billed_usd", count === 0 ? null : totalCost !== null && totalCost <= validated.policy.maxTotalBilledUsd,
     "A free model name never substitutes for actual billing verification");
+  add("live_data_exposure", !validated.runs.some((run) => run.provenance === "live" && validated.cases.find((task) => task.id === run.caseId)?.exposure !== "approved_public"),
+    "All live data must be explicitly approved public tasks");
   add("paired_completeness", missingPairs.length === 0, "No unmatched fixture cases");
   const insufficient = checks.some((check) => check.status === "insufficient") ||
     count < validated.policy.minLivePairs || families < validated.policy.minLiveTaskFamilies;
