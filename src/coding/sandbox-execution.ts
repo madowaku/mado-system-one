@@ -4,7 +4,7 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { cp, lstat, mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
+import { cp, copyFile, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, isAbsolute, join, resolve, sep } from "node:path";
 import { FREE_CODING_MODEL_REGISTRY } from "./free-agent-qualification.js";
@@ -292,10 +292,16 @@ export const executeDogfoodJob = async (
   await mkdir(artifactsRoot, { recursive: true });
   const sandbox = await mkdtemp(join(tmpdir(), "mso-dogfood-"));
   const workspace = join(sandbox, "workspace");
+  const sessionAuth = join(sandbox, "isolated-auth");
   const containerName = "mso-dogfood-" + randomUUID().slice(0, 12);
-  const invocation = dockerInvocation(job, workspace, authDir, prompt, containerName);
   try {
+    // Copy credentials into a throwaway owner-only store. Docker never receives
+    // the real operator credential directory as a writable mount.
+    await mkdir(sessionAuth, { mode: 0o700 });
+    await copyFile(join(authDir, "auth.json"), join(sessionAuth, "auth.json"));
+    await chmod(join(sessionAuth, "auth.json"), 0o600);
     await cp(fixturePath, workspace, { recursive: true, errorOnExist: true });
+    const invocation = dockerInvocation(job, workspace, sessionAuth, prompt, containerName);
     if (await hashPublicFixture(workspace) !== plan.fixtureSha256) throw new Error("fixture changed while staging");
     let command: CommandResult;
     try {
