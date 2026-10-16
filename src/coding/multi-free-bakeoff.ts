@@ -53,6 +53,16 @@ export interface MultiFreePairResult {
   firstP95ElapsedMs: number | null;
   secondP95ElapsedMs: number | null;
 }
+export interface MultiFreeTaskFamilySlice {
+  taskFamily: string;
+  matchedLiveCases: number;
+  providers: {
+    providerId: string;
+    verifiedPasses: number;
+    verifiedPassRate: number;
+    p95ElapsedMs: number | null;
+  }[];
+}
 export interface MultiFreeBakeoffEvidence {
   schemaVersion: "mso.multi-free-bakeoff.v0";
   datasetId: string;
@@ -64,6 +74,8 @@ export interface MultiFreeBakeoffEvidence {
   completeCohortCases: number;
   eligibleLiveCohortCases: number;
   missingRuns: { caseId: string; providerId: string }[];
+  unapprovedLiveRuns: { caseId: string; providerId: string }[];
+  taskFamilySlices: MultiFreeTaskFamilySlice[];
   candidates: CodingQualificationEvidence[];
   pairwise: MultiFreePairResult[];
   sourceRefs: string[];
@@ -218,6 +230,13 @@ export const runMultiFreeBakeoff = (raw: MultiFreeBakeoffInput): MultiFreeBakeof
     cohortCases.push(item);
     if (item.exposure === "approved_public" && group.every((run) => run?.provenance === "live")) liveCases.push(item);
   }
+  const unapprovedLiveRuns = input.runs
+    .filter((run) =>
+      run.provenance === "live" &&
+      input.cases.find((item) => item.id === run.caseId)?.exposure !== "approved_public")
+    .map((run) => ({ caseId: run.caseId, providerId: run.providerId }))
+    .sort((a, b) => a.caseId.localeCompare(b.caseId, "en") ||
+      a.providerId.localeCompare(b.providerId, "en"));
   const eligibleIds = new Set(liveCases.map((item) => item.id));
   const sampleIds = new Set(cohortCases.filter((item) => item.exposure === "public_synthetic").map((item) => item.id));
   const sampleRuns = input.runs.filter((run) => sampleIds.has(run.caseId) && run.provenance === "synthetic");
@@ -266,9 +285,27 @@ export const runMultiFreeBakeoff = (raw: MultiFreeBakeoffInput): MultiFreeBakeof
       secondP95ElapsedMs: p95(secondLatencies),
     });
   }
+  const taskFamilies = [...new Set(liveCases.map((item) => item.taskFamily))].sort();
+  const taskFamilySlices: MultiFreeTaskFamilySlice[] = taskFamilies.map((taskFamily) => {
+    const tasks = liveCases.filter((item) => item.taskFamily === taskFamily);
+    return {
+      taskFamily,
+      matchedLiveCases: tasks.length,
+      providers: allIds.sort((a, b) => a.localeCompare(b, "en")).map((providerId) => {
+        const relevant = tasks.map((task) => runMap.get(runKey(providerId, task.id))!);
+        const verifiedPasses = relevant.filter(verified).length;
+        return {
+          providerId, verifiedPasses,
+          verifiedPassRate: verifiedPasses / relevant.length,
+          p95ElapsedMs: p95(relevant.map((run) => run.elapsedMs)),
+        };
+      }),
+    };
+  });
   const hasBlocked = candidateEvidence.some((entry) => entry.decision === "blocked");
   const hasInsufficient = candidateEvidence.some((entry) => entry.decision === "insufficient_evidence");
-  const decision = hasInsufficient || missingRuns.length > 0 || liveCases.length < input.policy.minLivePairs
+  const decision = unapprovedLiveRuns.length > 0 ? "blocked" :
+    hasInsufficient || missingRuns.length > 0 || liveCases.length < input.policy.minLivePairs
     ? "insufficient_evidence"
     : hasBlocked ? "blocked" : "eligible_for_reviewed_shadow";
   const sourceRefs = new Set([
@@ -295,6 +332,8 @@ export const runMultiFreeBakeoff = (raw: MultiFreeBakeoffInput): MultiFreeBakeof
     completeCohortCases: cohortCases.length,
     eligibleLiveCohortCases: liveCases.length,
     missingRuns,
+    unapprovedLiveRuns,
+    taskFamilySlices,
     candidates: candidateEvidence,
     pairwise,
     sourceRefs: [...sourceRefs].sort(),
