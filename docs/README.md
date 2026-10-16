@@ -42,3 +42,6 @@ Multi-Agent Forge is an orchestration protocol above the existing planes, not a 
 
 12. **MADO_MULTI_FREE_CODING_BAKEOFF_RUNBOOK.md / MSO-DM-M0.6.1**  
     Full-cohort DeepSeek × GLM × Codex offline bake-off, identical-task fairness, per-model billing proof, and zero routing authority.
+
+13. **MADO_SANDBOXED_CODING_DOGFOOD_RUNBOOK.md / MSO-DM-M0.6.2**  
+    Explicit operator-gated Docker execution for public coding tasks, SHA-pinned evidence and per-run provider-billing attestation.
