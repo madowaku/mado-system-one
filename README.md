@@ -875,6 +875,14 @@ The OpenCode DeepSeek free-tier coding-agent lab is an offline, evidence-only ba
 
 See docs/MADO_FREE_CODING_AGENT_QUALIFICATION_RUNBOOK.md.
 
+## Multi-Free Coding Agent Bake-off / MSO-DM-M0.6.1
+
+The M0.6.1 offline bake-off compares the exact free OpenCode DeepSeek and GLM routes against the same Codex reference. It measures independent verification, p95 elapsed time, regressions, billing evidence and per-task pairwise outcomes **only on completely matched public live task cohorts**. It does not invoke models in CI or change production authority.
+
+    npm run dm:multi-free-bakeoff -- --input fixtures/dm/multi-free.synthetic.json --out evidence/dm/multi-free.synthetic.json
+
+See docs/MADO_MULTI_FREE_CODING_BAKEOFF_RUNBOOK.md.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -911,6 +919,7 @@ See docs/MADO_FREE_CODING_AGENT_QUALIFICATION_RUNBOOK.md.
 - **MSO-DM-M0.4** Provider Evidence Retrieval / Suitability Context Pack ✅
 - **MSO-DM-M0.5** Evidence-Aware Router Policy / Explainable Provider Selection
 - **MSO-DM-M0.6** Free DeepSeek Qualification / Zero-Cost Coding Agent Lab ✅
+- **MSO-DM-M0.6.1** Multi-Free Coding Agent Bake-off / DeepSeek × GLM Qualification ✅
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

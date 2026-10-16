@@ -39,3 +39,6 @@ Multi-Agent Forge is an orchestration protocol above the existing planes, not a 
 
 11. **MADO_FREE_CODING_AGENT_QUALIFICATION_RUNBOOK.md / MSO-DM-M0.6**  
     Offline, evidence-only free DeepSeek coding-agent benchmark, paired verification, billing proof and data-safety gates.
+
+12. **MADO_MULTI_FREE_CODING_BAKEOFF_RUNBOOK.md / MSO-DM-M0.6.1**  
+    Full-cohort DeepSeek × GLM × Codex offline bake-off, identical-task fairness, per-model billing proof, and zero routing authority.

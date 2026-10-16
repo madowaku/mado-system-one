@@ -44,3 +44,4 @@ export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";
 export * from "./forge/state-machine.js";
 export * from "./coding/free-agent-qualification.js";
+export * from "./coding/multi-free-bakeoff.js";

@@ -3,6 +3,12 @@
  * SystemOneProvider typed-decision interface. Offline and evidence-only.
  */
 export const FREE_DEEPSEEK_MODEL_ID = "opencode/deepseek-v4.1-flash-free";
+export const FREE_GLM_MODEL_ID = "opencode/glm-5.3-flash-free";
+/** Exact allowlist; paid aliases and unreviewed providers never inherit trust. */
+export const FREE_CODING_MODEL_REGISTRY: Readonly<Record<string, string>> = Object.freeze({
+  [FREE_DEEPSEEK_MODEL_ID]: "deepseek-v4.1-flash-free",
+  [FREE_GLM_MODEL_ID]: "glm-5.3-flash-free",
+});
 
 type VerificationStatus = "pass" | "fail" | "not_run";
 type Provenance = "synthetic" | "live";
@@ -292,8 +298,7 @@ export const qualifyFreeCodingAgent = (input: CodingQualificationInput): CodingQ
     checks.push({ id, status: ok === null ? "insufficient" : ok ? "pass" : "fail", detail });
   };
   add("model_identity_and_catalog",
-    validated.candidateId === FREE_DEEPSEEK_MODEL_ID &&
-    validated.catalogProof.modelId === "deepseek-v4.1-flash-free" &&
+    FREE_CODING_MODEL_REGISTRY[validated.candidateId] === validated.catalogProof.modelId &&
     validated.catalogProof.available &&
     validated.catalogProof.pricing === "free",
     "Require the exact free-tier model ID and operator-checked pricing, not the paid alias");
