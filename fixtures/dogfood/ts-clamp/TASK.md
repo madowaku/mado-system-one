@@ -1,0 +1,1 @@
+Public coding benchmark: fix clamp() in src/clamp.mjs so values smaller than min map to min, values greater than max map to max, and reversed bounds throw RangeError. Preserve exported function signature. Do not modify tests. No external dependencies.

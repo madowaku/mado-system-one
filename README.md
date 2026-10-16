@@ -883,6 +883,14 @@ The M0.6.1 offline bake-off compares the exact free OpenCode DeepSeek and GLM ro
 
 See docs/MADO_MULTI_FREE_CODING_BAKEOFF_RUNBOOK.md.
 
+## Real Free-Agent Dogfood / MSO-DM-M0.6.2
+
+The explicit opt-in Docker runner can execute each pre-registered public fixture with a pinned OpenCode image, isolated copy, permission limits and separately operator-approved network. It records only digests and unverified billing until independent test/human review and actual per-run ledger attestation. CI never calls hosted models.
+
+    npm run dm:dogfood -- probe --manifest fixtures/dm/dogfood-ts-clamp.dry-run.json --repo-root . --out /tmp/mso-dogfood-plan.json
+
+See docs/MADO_SANDBOXED_CODING_DOGFOOD_RUNBOOK.md.
+
 ## Roadmap
 
 - **M0.0** Core contracts ✅
@@ -920,6 +928,7 @@ See docs/MADO_MULTI_FREE_CODING_BAKEOFF_RUNBOOK.md.
 - **MSO-DM-M0.5** Evidence-Aware Router Policy / Explainable Provider Selection
 - **MSO-DM-M0.6** Free DeepSeek Qualification / Zero-Cost Coding Agent Lab ✅
 - **MSO-DM-M0.6.1** Multi-Free Coding Agent Bake-off / DeepSeek × GLM Qualification ✅
+- **MSO-DM-M0.6.2** Real Multi-Free Agent Dogfood / Sandboxed Execution & Billing Proof ✅
 - **MAF-M0.0** Multi-Agent Forge schema fixture ✅
 - **MAF-M0.1** Deterministic Forge workflow runner
 

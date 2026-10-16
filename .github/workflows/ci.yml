@@ -23,3 +23,5 @@ jobs:
       - run: npm test
       - run: npm run dm:multi-free-bakeoff -- --input fixtures/dm/multi-free.synthetic.json --out /tmp/mso-multi-free.synthetic.json
       - run: node -e "const a=require('/tmp/mso-multi-free.synthetic.json'); if(a.decision!=='insufficient_evidence' || a.automaticRoutingDecision!==false || a.eligibleLiveCohortCases!==0) process.exit(1)"
+      - run: npm run dm:dogfood -- probe --manifest fixtures/dm/dogfood-ts-clamp.dry-run.json --repo-root . --out /tmp/mso-dogfood-plan.json
+      - run: node -e "const a=require('/tmp/mso-dogfood-plan.json'); if(!a.simulatedOnly || a.externalCallsMade || a.secretsAccessed) process.exit(1)"

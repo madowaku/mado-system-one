@@ -1,0 +1,1 @@
+Public Godot 4 coding benchmark: repair score.gd combo_points so multiplier=3 and base=10 returns 30, multiplier=1 returns base, and negative inputs are rejected. Do not change test_score.gd. Verify via Godot headless if available. No external assets.
