@@ -54,7 +54,7 @@ test("only exact free model and digest-pinned image pass manifest",async t=>{
   assert.throws(()=>parseDogfoodJob({...fx.job,image:"ghcr.io/anomalyco/opencode:latest"}),/digest-pinned/);
   assert.throws(()=>parseDogfoodJob({...fx.job,egressNetwork:"bridge"}),/egress/);
   assert.throws(()=>parseDogfoodJob({...fx.job,fixtureDir:"../../secret"}),/relative/);
-  assert.throws(()=>parseDogfoodJob({...fx.job,approval:{...fx.job.approval,publicFixture:false}}),/approved/);
+  assert.equal(parseDogfoodJob({...fx.job,approval:{...fx.job.approval,publicFixture:false}}).approval.publicFixture,false);
   await assert.rejects(preflightDogfoodJob({...fx.job,expectedFixtureSha256:"0".repeat(64)},fx.repo),/SHA mismatch/);
 });
 test("forbid secret files, symlinks, hardlinks and project-supplied OpenCode config",async t=>{
@@ -102,6 +102,7 @@ test("cannot mount host repo as credential directory; failed run cannot look ind
   const fx=await setup();t.after(()=>rm(fx.root,{recursive:true,force:true}));
   const runner:CommandRunner=async()=>({exitCode:1,timedOut:false,elapsedMs:1000,outputSha256:"f".repeat(64),outputBytes:10});
   await assert.rejects(executeDogfoodJob(fx.job,fx.repo,fx.repo,fx.artifacts,runner),/overlap/);
+  await assert.rejects(executeDogfoodJob({...fx.job,approval:{...fx.job.approval,spendingRisk:false}},fx.repo,fx.auth,fx.artifacts,runner),/approvals/);
   const failed=await executeDogfoodJob(fx.job,fx.repo,fx.auth,fx.artifacts,runner);
   assert.equal(failed.status,"failed");
   assert.equal(failed.testStatus,"not_run");
