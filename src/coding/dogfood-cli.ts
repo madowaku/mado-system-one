@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { executeDogfoodJob, preflightDogfoodJob, hashPublicFixture } from "./sandbox-execution.js";
 import { reconcileDogfoodProof } from "./billing-reconciliation.js";
@@ -35,6 +35,9 @@ const main = async (args: string[]): Promise<void> => {
     const out = option(args, "--out");
     const { plan } = await preflightDogfoodJob(raw, repoRoot);
     if (args.includes("--execute")) {
+      // Avoid spending/launching only to discover an occupied output path.
+      try { await stat(out); throw new Error("output evidence path already exists"); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
       for (const flag of ["--ack-public", "--ack-network", "--ack-spending"]) {
         if (!args.includes(flag)) throw new Error("explicit execution acknowledgement required: " + flag);
       }
