@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "mso.coding-dogfood-job.v0",
+  "runId": "ts-clamp-deepseek-example",
+  "caseId": "ts-clamp",
+  "taskFamily": "typescript",
+  "providerId": "opencode/deepseek-v4.1-flash-free",
+  "fixtureDir": "fixtures/dogfood/ts-clamp",
+  "promptFile": "TASK.md",
+  "expectedFixtureSha256": "9a8a5a199876253ad1789938586ac38d57c13514616f4061af5da2b5c5b206ed",
+  "image": "ghcr.io/anomalyco/opencode@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "egressNetwork": "mso-free-egress-example",
+  "limits": {
+    "timeoutSeconds": 180,
+    "memoryMb": 1024,
+    "cpus": 2
+  },
+  "approval": {
+    "publicFixture": true,
+    "externalTransmission": false,
+    "spendingRisk": false,
+    "networkEgressControlled": false,
+    "approvalRef": "example:NOT-APPROVED"
+  }
+}
