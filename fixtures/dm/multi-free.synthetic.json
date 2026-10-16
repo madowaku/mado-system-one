@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "mso.multi-free-bakeoff-input.v0",
+  "datasetId": "multi-free-synthetic-smoke",
+  "evaluatedAt": "2026-10-16T12:00:00.000Z",
+  "incumbentId": "codex-reference",
+  "candidates": [
+    {
+      "providerId": "opencode/deepseek-v4.1-flash-free",
+      "catalogProof": {
+        "modelId": "deepseek-v4.1-flash-free",
+        "sourceRef": "https://opencode.ai/v2/docs/console/models/",
+        "checkedAt": "2026-10-16T11:30:00.000Z",
+        "available": true,
+        "pricing": "unverified"
+      }
+    },
+    {
+      "providerId": "opencode/glm-5.3-flash-free",
+      "catalogProof": {
+        "modelId": "glm-5.3-flash-free",
+        "sourceRef": "https://opencode.ai/v2/docs/console/models/",
+        "checkedAt": "2026-10-16T11:30:00.000Z",
+        "available": true,
+        "pricing": "unverified"
+      }
+    }
+  ],
+  "operatorReview": {
+    "isolationApproved": false,
+    "dataHandlingApproved": false,
+    "approvalRef": "synthetic:no-approval"
+  },
+  "policy": {
+    "minLivePairs": 4,
+    "minLiveTaskFamilies": 2,
+    "minVerifiedPassRate": 0.8,
+    "maxRegressionRate": 0.1,
+    "maxP95ElapsedMs": 120000,
+    "maxTotalBilledUsd": 0,
+    "maxCatalogAgeHours": 24
+  },
+  "cases": [
+    {
+      "id": "ts-error-boundary",
+      "taskFamily": "typescript",
+      "exposure": "public_synthetic",
+      "artifactRef": "fixture:ts-error-boundary",
+      "snapshotRef": "fixture-snapshot:ts-error-boundary",
+      "instructionRef": "fixture-instructions:ts-error-boundary",
+      "testPlanRef": "fixture-tests:ts-error-boundary",
+      "budgetRef": "fixture-budget:small"
+    },
+    {
+      "id": "godot-state-reset",
+      "taskFamily": "godot",
+      "exposure": "public_synthetic",
+      "artifactRef": "fixture:godot-state-reset",
+      "snapshotRef": "fixture-snapshot:godot-state-reset",
+      "instructionRef": "fixture-instructions:godot-state-reset",
+      "testPlanRef": "fixture-tests:godot-state-reset",
+      "budgetRef": "fixture-budget:small"
+    }
+  ],
+  "runs": [
+    {
+      "caseId": "ts-error-boundary",
+      "providerId": "codex-reference",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "synthetic-test:codex-reference:ts-error-boundary",
+      "reviewEvidenceRef": "synthetic-review:codex-reference:ts-error-boundary",
+      "artifactRef": "synthetic-artifact:codex-reference:ts-error-boundary",
+      "elapsedMs": 15000,
+      "billedUsd": null,
+      "snapshotRef": "fixture-snapshot:ts-error-boundary",
+      "instructionRef": "fixture-instructions:ts-error-boundary",
+      "testPlanRef": "fixture-tests:ts-error-boundary",
+      "budgetRef": "fixture-budget:small"
+    },
+    {
+      "caseId": "ts-error-boundary",
+      "providerId": "opencode/deepseek-v4.1-flash-free",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "synthetic-test:opencode/deepseek-v4.1-flash-free:ts-error-boundary",
+      "reviewEvidenceRef": "synthetic-review:opencode/deepseek-v4.1-flash-free:ts-error-boundary",
+      "artifactRef": "synthetic-artifact:opencode/deepseek-v4.1-flash-free:ts-error-boundary",
+      "elapsedMs": 15000,
+      "billedUsd": null,
+      "snapshotRef": "fixture-snapshot:ts-error-boundary",
+      "instructionRef": "fixture-instructions:ts-error-boundary",
+      "testPlanRef": "fixture-tests:ts-error-boundary",
+      "budgetRef": "fixture-budget:small"
+    },
+    {
+      "caseId": "ts-error-boundary",
+      "providerId": "opencode/glm-5.3-flash-free",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "synthetic-test:opencode/glm-5.3-flash-free:ts-error-boundary",
+      "reviewEvidenceRef": "synthetic-review:opencode/glm-5.3-flash-free:ts-error-boundary",
+      "artifactRef": "synthetic-artifact:opencode/glm-5.3-flash-free:ts-error-boundary",
+      "elapsedMs": 15000,
+      "billedUsd": null,
+      "snapshotRef": "fixture-snapshot:ts-error-boundary",
+      "instructionRef": "fixture-instructions:ts-error-boundary",
+      "testPlanRef": "fixture-tests:ts-error-boundary",
+      "budgetRef": "fixture-budget:small"
+    },
+    {
+      "caseId": "godot-state-reset",
+      "providerId": "codex-reference",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "synthetic-test:codex-reference:godot-state-reset",
+      "reviewEvidenceRef": "synthetic-review:codex-reference:godot-state-reset",
+      "artifactRef": "synthetic-artifact:codex-reference:godot-state-reset",
+      "elapsedMs": 15000,
+      "billedUsd": null,
+      "snapshotRef": "fixture-snapshot:godot-state-reset",
+      "instructionRef": "fixture-instructions:godot-state-reset",
+      "testPlanRef": "fixture-tests:godot-state-reset",
+      "budgetRef": "fixture-budget:small"
+    },
+    {
+      "caseId": "godot-state-reset",
+      "providerId": "opencode/deepseek-v4.1-flash-free",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "synthetic-test:opencode/deepseek-v4.1-flash-free:godot-state-reset",
+      "reviewEvidenceRef": "synthetic-review:opencode/deepseek-v4.1-flash-free:godot-state-reset",
+      "artifactRef": "synthetic-artifact:opencode/deepseek-v4.1-flash-free:godot-state-reset",
+      "elapsedMs": 15000,
+      "billedUsd": null,
+      "snapshotRef": "fixture-snapshot:godot-state-reset",
+      "instructionRef": "fixture-instructions:godot-state-reset",
+      "testPlanRef": "fixture-tests:godot-state-reset",
+      "budgetRef": "fixture-budget:small"
+    },
+    {
+      "caseId": "godot-state-reset",
+      "providerId": "opencode/glm-5.3-flash-free",
+      "provenance": "synthetic",
+      "testStatus": "pass",
+      "reviewStatus": "pass",
+      "testEvidenceRef": "synthetic-test:opencode/glm-5.3-flash-free:godot-state-reset",
+      "reviewEvidenceRef": "synthetic-review:opencode/glm-5.3-flash-free:godot-state-reset",
+      "artifactRef": "synthetic-artifact:opencode/glm-5.3-flash-free:godot-state-reset",
+      "elapsedMs": 15000,
+      "billedUsd": null,
+      "snapshotRef": "fixture-snapshot:godot-state-reset",
+      "instructionRef": "fixture-instructions:godot-state-reset",
+      "testPlanRef": "fixture-tests:godot-state-reset",
+      "budgetRef": "fixture-budget:small"
+    }
+  ]
+}
