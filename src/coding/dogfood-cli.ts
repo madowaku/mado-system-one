@@ -24,7 +24,7 @@ const main = async (args: string[]): Promise<void> => {
   if (args[0] === "hash") {
     const repoRoot = resolve(option(args, "--repo-root"));
     const fixture = option(args, "--fixture");
-    if (!/^fixtures\\/dogfood\\/[a-zA-Z0-9_-]+$/.test(fixture)) throw new Error("fixture must be a public dogfood fixture directory");
+    if (!fixture.startsWith("fixtures/dogfood/") || !/^[a-zA-Z0-9_-]+$/.test(fixture.slice("fixtures/dogfood/".length))) throw new Error("fixture must be a public dogfood fixture directory");
     const digest = await hashPublicFixture(resolve(repoRoot, fixture));
     console.log("sha256:" + digest);
     return;
