@@ -49,9 +49,10 @@ A useful second check is `npm run dm:free-qualify`, which remains compatible wit
 ## Fairness and evidence contracts
 
 - A case is included in the **live cohort only if Codex, DeepSeek and GLM all produced a live run for that exact approved-public case**. One missing candidate excludes that case from *everyone's* score; missing run pairs remain explicitly visible.
+- Any recorded **live run on an unapproved/synthetic-only case blocks the whole bake-off**, even if enough other approved cases exist.
 - Every run must match the case's snapshot/instruction/test-plan/budget references. Mismatch throws an error and cannot yield a ranking or promote a candidate.
 - Existing M0.6 checks apply independently to each candidate **using the same complete live cohort**, including exact model identity, fresh catalog evidence, approved data/isolation, verified test + human review, minimum paired cases and task families, regression rate, p95 elapsed time, actual billing coverage and zero-spend threshold.
-- Pairwise results are **descriptive**: firstWins, secondWins, bothPass, bothFail, and each candidate's p95 elapsed time. They are not a validated statistical superiority claim or authority to rank or route providers.
+- Pairwise results are **descriptive**: firstWins, secondWins, bothPass, bothFail, and each candidate's p95 elapsed time. The report also includes per-task-family verified pass rate and latency for Codex, DeepSeek and GLM on matched live cases. They are not a validated statistical superiority claim or authority to rank or route providers.
 - Multiple comparable observations and more extensive real workloads are necessary before drawing a significant conclusion; minLivePairs=4 is an early smoke threshold, not evidence of general quality.
 - Current allowlist comprises only the two exact free model IDs. New model variants need explicit registration and fresh review; no guessing from model-name suffixes.
 - Strict schemas forbid unknown prompt/code fields and duplicate run identities. Report holds references to evidence, not raw model completions or proprietary code.
