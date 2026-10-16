@@ -216,7 +216,7 @@ export const dockerInvocation = (job: DogfoodJob, workspace: string, authDir: st
     "--env=OPENCODE_DISABLE_CLAUDE_CODE=true",
     "--env=OPENCODE_DISABLE_AUTOUPDATE=true",
     "--env=OPENCODE_DISABLE_LSP_DOWNLOAD=true",
-    job.image, "opencode", "--pure", "run", "--model", job.providerId,
+    "--entrypoint=opencode", job.image, "--pure", "run", "--model", job.providerId,
     "--format", "json", "--title", "mso-dogfood-" + job.caseId, prompt,
   ] };
 };
@@ -265,10 +265,18 @@ export const executeDogfoodJob = async (
 ): Promise<DogfoodEvidence> => {
   const { job, fixturePath, plan, prompt } = await preflightDogfoodJob(raw, repoRoot);
   if (!isAbsolute(authDir) || !isAbsolute(artifactsRoot)) throw new Error("auth/artifacts paths must be absolute");
-  if (resolve(authDir) === resolve(artifactsRoot)) throw new Error("auth and artifact roots must differ");
+  const authPath = resolve(authDir);
+  const artifactRoot = resolve(artifactsRoot);
+  const repoPath = resolve(repoRoot);
+  const intersects = (a: string, b: string): boolean =>
+    a === b || a.startsWith(b + sep) || b.startsWith(a + sep);
+  if (intersects(authPath, artifactRoot) || intersects(authPath, repoPath)) {
+    throw new Error("credential directory cannot overlap repository or artifacts");
+  }
   const auth = await lstat(authDir);
   if (!auth.isDirectory() || auth.isSymbolicLink()) throw new Error("dedicated auth directory required");
   const authFile = await lstat(join(authDir, "auth.json"));
+  if ((auth.mode & 0o077) !== 0) throw new Error("auth directory must be owner-only (chmod 700)");
   if (!authFile.isFile() || authFile.isSymbolicLink()) throw new Error("dedicated OpenCode auth.json required");
   if ((authFile.mode & 0o077) !== 0) throw new Error("auth.json must have owner-only permissions (chmod 600)");
   const artifactPath = resolve(artifactsRoot, job.runId);
