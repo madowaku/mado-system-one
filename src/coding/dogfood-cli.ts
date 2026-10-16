@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { executeDogfoodJob, preflightDogfoodJob } from "./sandbox-execution.js";
+import { executeDogfoodJob, preflightDogfoodJob, hashPublicFixture } from "./sandbox-execution.js";
 import { reconcileDogfoodProof } from "./billing-reconciliation.js";
 import type { DogfoodEvidence } from "./sandbox-execution.js";
 import type { PairedCodingCase } from "./multi-free-bakeoff.js";
@@ -21,6 +21,14 @@ const save = async (path: string, value: unknown): Promise<void> => {
 };
 
 const main = async (args: string[]): Promise<void> => {
+  if (args[0] === "hash") {
+    const repoRoot = resolve(option(args, "--repo-root"));
+    const fixture = option(args, "--fixture");
+    if (!/^fixtures\\/dogfood\\/[a-zA-Z0-9_-]+$/.test(fixture)) throw new Error("fixture must be a public dogfood fixture directory");
+    const digest = await hashPublicFixture(resolve(repoRoot, fixture));
+    console.log("sha256:" + digest);
+    return;
+  }
   if (args[0] === "probe") {
     const raw = await readJson(option(args, "--manifest"));
     const repoRoot = resolve(option(args, "--repo-root"));
