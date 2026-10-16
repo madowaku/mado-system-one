@@ -83,9 +83,9 @@ const int = (v: unknown, n: string, min: number, max: number): number => {
   }
   return v;
 };
-const yes = (v: unknown, n: string): true => {
-  if (v !== true) throw new Error(n + " must be explicitly approved");
-  return true;
+const bool = (v: unknown, n: string): boolean => {
+  if (typeof v !== "boolean") throw new Error(n + " must be boolean");
+  return v;
 };
 
 export const parseDogfoodJob = (raw: unknown): DogfoodJob => {
@@ -124,10 +124,10 @@ export const parseDogfoodJob = (raw: unknown): DogfoodJob => {
       cpus: int(limits.cpus, "cpus", 1, 4),
     },
     approval: {
-      publicFixture: yes(approval.publicFixture, "publicFixture"),
-      externalTransmission: yes(approval.externalTransmission, "externalTransmission"),
-      spendingRisk: yes(approval.spendingRisk, "spendingRisk"),
-      networkEgressControlled: yes(approval.networkEgressControlled, "networkEgressControlled"),
+      publicFixture: bool(approval.publicFixture, "publicFixture"),
+      externalTransmission: bool(approval.externalTransmission, "externalTransmission"),
+      spendingRisk: bool(approval.spendingRisk, "spendingRisk"),
+      networkEgressControlled: bool(approval.networkEgressControlled, "networkEgressControlled"),
       approvalRef: required(approval.approvalRef, "approvalRef"),
     },
   };
@@ -171,6 +171,10 @@ export const hashPublicFixture = async (root: string): Promise<string> => {
 
 export const preflightDogfoodJob = async (raw: unknown, repoRoot: string): Promise<{ job: DogfoodJob; plan: DogfoodPlan; fixturePath: string; prompt: string }> => {
   const job = parseDogfoodJob(raw);
+  for (const dir of [resolve(repoRoot), resolve(repoRoot, "fixtures"), resolve(repoRoot, "fixtures", "dogfood")]) {
+    const st = await lstat(dir);
+    if (!st.isDirectory() || st.isSymbolicLink()) throw new Error("public fixture path may not contain linked directories");
+  }
   const allowedRoot = resolve(repoRoot, "fixtures", "dogfood");
   const fixturePath = resolve(repoRoot, job.fixtureDir);
   if (!fixturePath.startsWith(allowedRoot + sep)) throw new Error("fixture escaped allowed root");
@@ -264,6 +268,9 @@ export const executeDogfoodJob = async (
   runner: CommandRunner = defaultCommandRunner,
 ): Promise<DogfoodEvidence> => {
   const { job, fixturePath, plan, prompt } = await preflightDogfoodJob(raw, repoRoot);
+  if (!Object.entries(job.approval).every(([key, value]) => key === "approvalRef" || value === true)) {
+    throw new Error("explicit public/data/network/spending approvals required before live execution");
+  }
   if (!isAbsolute(authDir) || !isAbsolute(artifactsRoot)) throw new Error("auth/artifacts paths must be absolute");
   const authPath = resolve(authDir);
   const artifactRoot = resolve(artifactsRoot);
