@@ -137,7 +137,7 @@ test("a synthetic GLM or unapproved public task cannot inflate paired live evide
   assert.equal(runMultiFreeBakeoff(synthetic).decision, "insufficient_evidence");
   const unapproved = build();
   unapproved.cases[0]!.exposure = "public_synthetic";
-  assert.equal(runMultiFreeBakeoff(unapproved).decision, "insufficient_evidence");
+  assert.equal(runMultiFreeBakeoff(unapproved).decision, "blocked");
 });
 
 test("price, stale catalog, absent invoice and paid alias cannot earn shadow eligibility", () => {
