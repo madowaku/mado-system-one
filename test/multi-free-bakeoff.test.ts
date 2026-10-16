@@ -96,6 +96,9 @@ test("all three comparable live runs yield separate shadow-only qualification fo
   assert.ok(result.candidates.every((item) => item.decision === "eligible_for_shadow"));
   assert.equal(result.pairwise.length, 1);
   assert.equal(result.pairwise[0]?.bothPass, 2);
+  assert.deepEqual(result.taskFamilySlices.map((slice) => slice.taskFamily), ["godot", "typescript"]);
+  assert.equal(result.taskFamilySlices[0]?.providers.length, 3);
+  assert.ok(result.taskFamilySlices.every((slice) => slice.providers.every((provider) => provider.verifiedPassRate === 1)));
   assert.equal(result.pairwise[0]?.firstWins, 0);
   assert.equal(result.pairwise[0]?.secondWins, 0);
   assert.equal(result.automaticProviderRanking, false);
@@ -194,4 +197,24 @@ test("JSON round-trip and candidate input order are deterministic", () => {
   assert.deepEqual(x, y);
   assert.equal(JSON.stringify(x).includes("secret code"), false);
   assert.ok(x.sourceRefs.includes("operator:public-disposable-workspaces"));
+});
+
+test("live agent activity on an unapproved fixture always blocks the bakeoff", () => {
+  const input = build();
+  input.cases[0]!.exposure = "public_synthetic";
+  const result = runMultiFreeBakeoff(input);
+  assert.equal(result.decision, "blocked");
+  assert.equal(result.unapprovedLiveRuns.length, 3);
+  assert.equal(result.automaticRoutingDecision, false);
+});
+
+test("task-family results expose a GLM-only defect without confusing Godot and TypeScript", () => {
+  const input = build();
+  findRun(input, FREE_GLM_MODEL_ID, "godot-state").testStatus = "fail";
+  const result = runMultiFreeBakeoff(input);
+  assert.equal(result.decision, "blocked");
+  const godot = result.taskFamilySlices.find((slice) => slice.taskFamily === "godot");
+  const ts = result.taskFamilySlices.find((slice) => slice.taskFamily === "typescript");
+  assert.equal(godot?.providers.find((p) => p.providerId === FREE_GLM_MODEL_ID)?.verifiedPassRate, 0);
+  assert.equal(ts?.providers.find((p) => p.providerId === FREE_GLM_MODEL_ID)?.verifiedPassRate, 1);
 });
