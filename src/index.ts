@@ -47,3 +47,4 @@ export * from "./coding/free-agent-qualification.js";
 export * from "./coding/multi-free-bakeoff.js";
 export * from "./coding/sandbox-execution.js";
 export * from "./coding/billing-reconciliation.js";
+export * from "./coding/free-agent-delegation.js";
