@@ -4,10 +4,12 @@
  */
 export const FREE_DEEPSEEK_MODEL_ID = "opencode/deepseek-v4.1-flash-free";
 export const FREE_GLM_MODEL_ID = "opencode/glm-5.3-flash-free";
+export const FREE_BEAM_MODEL_ID = "opencode/beam-free";
 /** Exact allowlist; paid aliases and unreviewed providers never inherit trust. */
 export const FREE_CODING_MODEL_REGISTRY: Readonly<Record<string, string>> = Object.freeze({
   [FREE_DEEPSEEK_MODEL_ID]: "deepseek-v4.1-flash-free",
   [FREE_GLM_MODEL_ID]: "glm-5.3-flash-free",
+  [FREE_BEAM_MODEL_ID]: "beam-free",
 });
 
 type VerificationStatus = "pass" | "fail" | "not_run";

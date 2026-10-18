@@ -25,3 +25,5 @@ jobs:
       - run: node -e "const a=require('/tmp/mso-multi-free.synthetic.json'); if(a.decision!=='insufficient_evidence' || a.automaticRoutingDecision!==false || a.eligibleLiveCohortCases!==0) process.exit(1)"
       - run: npm run dm:dogfood -- probe --manifest fixtures/dm/dogfood-ts-clamp.dry-run.json --repo-root . --out /tmp/mso-dogfood-plan.json
       - run: node -e "const a=require('/tmp/mso-dogfood-plan.json'); if(!a.simulatedOnly || a.externalCallsMade || a.secretsAccessed) process.exit(1)"
+      - run: npm run dm:free-mcp:bootstrap -- --repo-root . --out /tmp/mso-triple-free-registry.json
+      - run: node -e "const a=require('/tmp/mso-triple-free-registry.json'); const keys=['public:implement','public:review','public:long_context']; if(keys.some(k=>!a[k] || a[k].approval.externalTransmission || a[k].approval.spendingRisk || a[k].approval.networkEgressControlled)) process.exit(1)"
