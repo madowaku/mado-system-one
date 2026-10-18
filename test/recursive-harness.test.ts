@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";import {test} from "node:test";
+import {evaluateTrial,appendHistory,validateHistory,type Probe,type Trial} from "../src/recursive-harness/lab.js";
+const d=(c:string)=>c.repeat(64);
+const probe=(executor:Probe["executor"],variant:Probe["variant"]):Probe=>({taskId:"t1",executor,variant,fixtureDigest:d("a"),policyDigest:d("b"),testPlanDigest:d("c"),budgetDigest:d("d"),evidenceDigest:d("e"),seed:1,success:true,independentVerified:true,regressions:0,latencyMs:100,costUsd:0,provenance:"observed",sandboxed:true,networkRestricted:true,sideEffects:false});
+const trial=():Trial=>({trialId:"t",candidateDigest:d("f"),baselineDigest:d("0"),operatorApproved:true,lesson:"safe",probes:(["codex","free-agent"] as const).flatMap(e=>[probe(e,"baseline"),probe(e,"candidate")])});
+test("observed pairs require separate review",()=>{const x=evaluateTrial(trial());assert.equal(x.decision,"review_required");assert.equal(x.metrics.pairs,2);assert.equal(x.candidatesNeverAutoActivated,true)});
+test("synthetic and missing pairs fail closed",()=>{const t=trial();t.probes[0]!.provenance="synthetic";assert.equal(evaluateTrial(t).decision,"insufficient_evidence");t.probes=t.probes.slice(0,2);assert.equal(evaluateTrial(t).decision,"insufficient_evidence")});
+test("changed budget rejects",()=>{const t=trial();t.probes[1]!.budgetDigest=d("9");assert.equal(evaluateTrial(t).decision,"reject")});
+test("regressions and unsafe probes reject",()=>{const t=trial();t.probes[1]!.regressions=1;assert.equal(evaluateTrial(t).decision,"reject");t.probes[1]!.regressions=0;t.probes[1]!.sandboxed=false;assert.equal(evaluateTrial(t).decision,"reject")});
+test("correctness deterioration rejects",()=>{const t=trial();t.probes[1]!.success=false;assert.equal(evaluateTrial(t).decision,"reject")});
+test("duplicate and malformed evidence errors",()=>{const t=trial();t.probes.push(t.probes[0]!);assert.throws(()=>evaluateTrial(t));t.probes.pop();t.probes[0]!.latencyMs=NaN;assert.throws(()=>evaluateTrial(t))});
+test("operator flag cannot activate",()=>{const t=trial();t.operatorApproved=false;assert.equal(evaluateTrial(t).decision,"review_required")});
+test("hash history detects tampering",()=>{const h=appendHistory([],evaluateTrial(trial()),"2026-10-18T00:00:00Z");validateHistory(h);h[0]!.outcome.reasons.push("tampered");assert.throws(()=>validateHistory(h))});
