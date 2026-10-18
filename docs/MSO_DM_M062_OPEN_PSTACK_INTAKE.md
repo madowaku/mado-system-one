@@ -1,6 +1,8 @@
 # MSO-DM-M0.6-RHO.P1 Open Pstack Intake / Evidence-Driven Engineering Gate
 
-The early proposal called this M0.6.2, but that identifier is already used by the OpenCode dogfood PR #31. This independent extension is therefore **RHO.P1**.\n\nThis is a **stacked, non-activating extension** of MSO-DM-M0.6-RHO (#34). It reads evidence only. The existing `src/recursive-harness/lab.ts` remains the sole paired Codex / Free Agent evaluator. This module adds a version-pinned, manually reviewed Open Pstack candidate and an extra cost/latency/quality budget gate.
+The early proposal called this M0.6.2, but that identifier is already used by the OpenCode dogfood PR #31. This independent extension is therefore **RHO.P1**.
+
+This is a **stacked, non-activating extension** of MSO-DM-M0.6-RHO (#34). It reads evidence only. The existing `src/recursive-harness/lab.ts` remains the sole paired Codex / Free Agent evaluator. This module adds a version-pinned, manually reviewed Open Pstack candidate and an extra cost/latency/quality budget gate.
 
 ## What was inspected (2026-10-18)
 
