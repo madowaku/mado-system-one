@@ -11,6 +11,37 @@ Codex CLI -> MCP stdio `delegate_free_agent` -> exact role mapping -> M0.6.2 pub
 
 These roles are hypotheses, not observed model-quality claims. All three model IDs and their pricing must be checked in OpenCode immediately before any live use; an expired free rate is **not** permission to fall back to paid aliases. The registry contains no arbitrary model keys.
 
+## Fast local setup (PowerShell / Codex on Windows)
+
+This is the recommended, **zero model calls, zero billing** path. Use a local clone of `feat/mso-dm-m062c-triple-free-mcp-router` (stacked on Draft PR #31). From the repository root:
+
+```powershell
+npm install
+npm run build
+$repo = (Get-Location).Path
+$registry = Join-Path $HOME ".madowaku\\free-agent-registry.json"
+npm run dm:free-mcp:bootstrap -- --repo-root "$repo" --out "$registry"
+codex mcp add mso-free-agents --env "MSO_DELEGATION_REPO_ROOT=$repo" --env "MSO_DELEGATION_REGISTRY=$registry" -- node "$repo/dist/src/coding/free-agent-mcp.js"
+codex mcp list
+```
+
+The bootstrap generates *three public fixtures* with correct snapshot hashes and **false** transmission, network and spending approvals. It intentionally uses a fictitious Docker image digest. It is not runnable in live mode without further operator changes. The output is outside the git repository. Do not commit it.
+
+For macOS/Linux:
+
+```bash
+npm install && npm run build
+repo="$PWD"
+registry="$HOME/.madowaku/free-agent-registry.json"
+npm run dm:free-mcp:bootstrap -- --repo-root "$repo" --out "$registry"
+codex mcp add mso-free-agents --env "MSO_DELEGATION_REPO_ROOT=$repo" --env "MSO_DELEGATION_REGISTRY=$registry" -- node "$repo/dist/src/coding/free-agent-mcp.js"
+codex mcp list
+```
+
+Bootstrap uses exclusive file creation and refuses overwriting an existing registry. To regenerate, first move the existing file out of the way. After registration restart any already-running Codex app/CLI session, then ask Codex to list `list_free_agent_roles` and call `delegate_free_agent` with `{"role":"implement","taskRef":"public:implement","privacy":"approved_public","mode":"dry_run"}`. The corresponding `public:review` and `public:long_context` records also exist. Successful dry-run results say `externalCallsMade:false`.
+
+**What this does not do:** A locally connected OpenCode Zen API key is separate from the MCP server. A dry-run does not need the key or Docker at all. Live delegation requires the isolated credentials/network/image and the extra one-time approval below, and must not be inferred from successful MCP registration.
+
 ## Configure Codex CLI (read-only planning first)
 
 1. Clone this branch / merge the stacked PRs. `npm install && npm run build`.
