@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "mso.open-pstack-trial.v0",
+  "intake": {
+    "schemaVersion": "mso.open-pstack-intake.v0",
+    "source": {
+      "repository": "ericlitman/open-pstack",
+      "release": "1.15.0",
+      "commit": "9368993ea3d96b491833d53c0964b389e868162c",
+      "license": "MIT"
+    },
+    "skills": [
+      {
+        "name": "poteto-mode",
+        "path": "plugins/pstack/skills/poteto-mode/SKILL.md",
+        "blobSha": "dcab879a0cdb30b4885536bb9a3b90161808d765"
+      },
+      {
+        "name": "reflect",
+        "path": "plugins/pstack/skills/reflect/SKILL.md",
+        "blobSha": "a1d550b75af79b1ba57f56fe522953bdae612012"
+      },
+      {
+        "name": "correct",
+        "path": "plugins/pstack/skills/correct/SKILL.md",
+        "blobSha": "c45e06f48a0982ae19f92c6e83a8cd05988097a3"
+      }
+    ],
+    "controls": {
+      "installPlugin": false,
+      "enableHooks": false,
+      "runExternalCommands": false,
+      "enableNetwork": false,
+      "modifyGlobalSettings": false,
+      "automaticActivation": false,
+      "humanReviewRequired": true,
+      "maxAddedCostUsd": 0,
+      "maxAddedLatencyMs": 0,
+      "minVerifiedSuccessGain": 0
+    },
+    "audit": {
+      "status": "pending"
+    }
+  },
+  "trial": {
+    "trialId": "open-pstack-synthetic",
+    "candidateDigest": "1844d732d09b013b92117dd398e82cbe73930ced09ea314a858193d83f85df9e",
+    "baselineDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "probes": [
+      {
+        "taskId": "synthetic-probe",
+        "executor": "codex",
+        "variant": "baseline",
+        "fixtureDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "policyDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "testPlanDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "budgetDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "seed": 1,
+        "success": true,
+        "independentVerified": true,
+        "regressions": 0,
+        "latencyMs": 100,
+        "costUsd": 0,
+        "provenance": "synthetic",
+        "sandboxed": true,
+        "networkRestricted": true,
+        "sideEffects": false,
+        "evidenceDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      {
+        "taskId": "synthetic-probe",
+        "executor": "codex",
+        "variant": "candidate",
+        "fixtureDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "policyDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "testPlanDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "budgetDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "seed": 1,
+        "success": true,
+        "independentVerified": true,
+        "regressions": 0,
+        "latencyMs": 100,
+        "costUsd": 0,
+        "provenance": "synthetic",
+        "sandboxed": true,
+        "networkRestricted": true,
+        "sideEffects": false,
+        "evidenceDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      {
+        "taskId": "synthetic-probe",
+        "executor": "free-agent",
+        "variant": "baseline",
+        "fixtureDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "policyDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "testPlanDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "budgetDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "seed": 1,
+        "success": true,
+        "independentVerified": true,
+        "regressions": 0,
+        "latencyMs": 100,
+        "costUsd": 0,
+        "provenance": "synthetic",
+        "sandboxed": true,
+        "networkRestricted": true,
+        "sideEffects": false,
+        "evidenceDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      {
+        "taskId": "synthetic-probe",
+        "executor": "free-agent",
+        "variant": "candidate",
+        "fixtureDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "policyDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "testPlanDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "budgetDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "seed": 1,
+        "success": true,
+        "independentVerified": true,
+        "regressions": 0,
+        "latencyMs": 100,
+        "costUsd": 0,
+        "provenance": "synthetic",
+        "sandboxed": true,
+        "networkRestricted": true,
+        "sideEffects": false,
+        "evidenceDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "operatorApproved": false,
+    "lesson": "Synthetic pairing only. Never counts as observed evidence."
+  }
+}
