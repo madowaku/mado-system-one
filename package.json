@@ -13,7 +13,8 @@
     "dm:free-qualify": "npm run build --silent && node dist/src/coding/free-agent-cli.js",
     "dm:multi-free-bakeoff": "npm run build --silent && node dist/src/coding/multi-free-cli.js",
     "dm:dogfood": "npm run build --silent && node dist/src/coding/dogfood-cli.js",
-    "dm:free-mcp": "npm run build --silent && node dist/src/coding/free-agent-mcp.js"
+    "dm:free-mcp": "npm run build --silent && node dist/src/coding/free-agent-mcp.js",
+    "dm:free-mcp:bootstrap": "npm run build --silent && node dist/src/coding/free-agent-bootstrap.js"
   },
   "peerDependencies": {
     "laya-ts": "^0.1.0"
