@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 import {
   evaluatePstackGate,
@@ -116,4 +119,25 @@ test("quality gain threshold is a recorded part of candidate fingerprint", () =>
   input.intake.controls.minVerifiedSuccessGain = 1;
   input.trial.candidateDigest = fingerprintPstackIntake(input.intake);
   assert.equal(evaluatePstackGate(input).decision, "reject");
+});
+
+test("real CLI creates only a new report and refuses to overwrite it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "mso-pstack-"));
+  try {
+    const out = join(dir, "gate.json");
+    const args = ["dist/src/open-pstack/cli.js", "fixtures/open-pstack/paired.synthetic.json", out];
+    const first = spawnSync(process.execPath, args, { encoding: "utf8" });
+    assert.equal(first.status, 0, first.stderr);
+    const report = JSON.parse(readFileSync(out, "utf8")) as {
+      decision: string; automaticActivation: boolean; codeOrPluginExecuted: boolean;
+    };
+    assert.equal(report.decision, "insufficient_evidence");
+    assert.equal(report.automaticActivation, false);
+    assert.equal(report.codeOrPluginExecuted, false);
+    const second = spawnSync(process.execPath, args, { encoding: "utf8" });
+    assert.equal(second.status, 1);
+    assert.equal(JSON.parse(readFileSync(out, "utf8")).decision, "insufficient_evidence");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
