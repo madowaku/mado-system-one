@@ -104,7 +104,7 @@
       "source": "https://github.com/affaan-m/ECC",
       "license": "MIT",
       "path": "skills/ecc-harness-review/SKILL.md",
-      "body": "---\\nname: ecc-harness-review\\ndescription: Review harness evidence without executing commands.\\n---\\n\\n# Review\\nRequire independent evidence; never auto-promote.\\n"
+      "body": "---\nname: ecc-harness-review\ndescription: Review harness evidence without executing commands.\n---\n\n# Review\nRequire independent evidence; never auto-promote.\n"
     }
   ]
 }
