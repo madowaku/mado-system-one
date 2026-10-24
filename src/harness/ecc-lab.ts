@@ -159,7 +159,7 @@ export function parseHarnessLabInput(value: unknown): HarnessLabInput {
   }
   const skillIds = new Set<string>();
   for (const s of input.skills) {
-    if (!object(s) || !nonempty(s.id) || skillIds.has(s.id) ||
+    if (!object(s) || !nonempty(s.id) || !/^[a-z0-9-]+$/.test(s.id) || skillIds.has(s.id) ||
         !nonempty(s.source) || !nonempty(s.license) ||
         !nonempty(s.path) || typeof s.body !== "string" || s.body.length > 100000) {
       throw new Error("invalid skill candidate");
@@ -236,7 +236,7 @@ export function evaluateHarnessLab(input: HarnessLabInput): HarnessLabReport {
     if (s.license !== "MIT" || s.source !== "https://github.com/affaan-m/ECC") {
       reasons.push("unapproved source or license");
     }
-    if (!/^skills\/[a-z0-9-]+\/SKILL\.md$/.test(s.path)) reasons.push("unsafe skill path");
+    if (s.path !== `skills/${s.id}/SKILL.md`) reasons.push("unsafe skill path");
     if (!new RegExp("^---\\r?\\nname: " + s.id + "\\r?\\ndescription: .+", "m").test(s.body)) {
       reasons.push("missing portable skill frontmatter");
     }
