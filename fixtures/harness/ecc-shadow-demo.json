@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "mso.ecc-harness-input.v0",
+  "tasks": [
+    {
+      "id": "fixture.smoke.1",
+      "projectId": "mado-system-one",
+      "revision": "fixture-pin-001",
+      "sensitivity": "public",
+      "requiredChecks": [
+        "unit",
+        "review"
+      ]
+    }
+  ],
+  "receipts": [
+    {
+      "taskId": "fixture.smoke.1",
+      "lane": "codex",
+      "attempt": 1,
+      "origin": "synthetic",
+      "isolated": true,
+      "projectId": "mado-system-one",
+      "revision": "fixture-pin-001",
+      "checks": [
+        {
+          "id": "unit",
+          "status": "PASS",
+          "judge": "deterministic",
+          "evidenceRef": "fixture://unit"
+        },
+        {
+          "id": "review",
+          "status": "PASS",
+          "judge": "independent",
+          "evidenceRef": "fixture://review"
+        }
+      ],
+      "evidenceRef": "fixture://synthetic-only"
+    },
+    {
+      "taskId": "fixture.smoke.1",
+      "lane": "claude-code",
+      "attempt": 1,
+      "origin": "synthetic",
+      "isolated": true,
+      "projectId": "mado-system-one",
+      "revision": "fixture-pin-001",
+      "checks": [
+        {
+          "id": "unit",
+          "status": "PASS",
+          "judge": "deterministic",
+          "evidenceRef": "fixture://unit"
+        },
+        {
+          "id": "review",
+          "status": "PASS",
+          "judge": "independent",
+          "evidenceRef": "fixture://review"
+        }
+      ],
+      "evidenceRef": "fixture://synthetic-only"
+    },
+    {
+      "taskId": "fixture.smoke.1",
+      "lane": "free",
+      "attempt": 1,
+      "origin": "synthetic",
+      "isolated": true,
+      "projectId": "mado-system-one",
+      "revision": "fixture-pin-001",
+      "checks": [
+        {
+          "id": "unit",
+          "status": "PASS",
+          "judge": "deterministic",
+          "evidenceRef": "fixture://unit"
+        },
+        {
+          "id": "review",
+          "status": "PASS",
+          "judge": "independent",
+          "evidenceRef": "fixture://review"
+        }
+      ],
+      "evidenceRef": "fixture://synthetic-only"
+    }
+  ],
+  "instincts": [
+    {
+      "id": "verify-before-claim",
+      "projectId": "mado-system-one",
+      "scope": "project",
+      "confidence": 0.75,
+      "evidenceRefs": [
+        "fixture://repeat-1"
+      ],
+      "proposedAction": "Require deterministic evidence before recording success"
+    }
+  ],
+  "skills": [
+    {
+      "id": "ecc-harness-review",
+      "source": "https://github.com/affaan-m/ECC",
+      "license": "MIT",
+      "path": "skills/ecc-harness-review/SKILL.md",
+      "body": "---\\nname: ecc-harness-review\\ndescription: Review harness evidence without executing commands.\\n---\\n\\n# Review\\nRequire independent evidence; never auto-promote.\\n"
+    }
+  ]
+}
