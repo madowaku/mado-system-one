@@ -43,3 +43,5 @@ export * from "./baseline/io.js";
 export * from "./forge/contracts.js";
 export * from "./forge/ownership.js";
 export * from "./forge/state-machine.js";
+
+export * from "./harness/ecc-lab.js";
