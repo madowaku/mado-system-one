@@ -914,3 +914,7 @@ See `docs/MADO_PROVIDER_EVIDENCE_RETRIEVAL_RUNBOOK.md`.
 ## Status
 
 The project has moved from a single decision layer toward a provider-aware decision + context plane architecture. Interfaces and thresholds remain experimental until validated on MADO workloads.
+
+## ECC Harness Intelligence Lab (MSO-DM-M0.7)
+
+An opt-in, offline evidence and safety comparison for Codex, Claude Code and a free-model lane. Synthetic fixtures intentionally HOLD instead of claiming a real model benchmark. No ECC runtime, hooks, agent dispatch or automatic promotion is enabled. See [M0.7 runbook](docs/MSO_DM_M0_7_ECC_HARNESS_INTELLIGENCE_LAB.md).
