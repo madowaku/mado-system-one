@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
@@ -121,5 +122,35 @@ test("reject malformed inputs and duplicate receipts instead of fabricating miss
   }));
   assert.throws(() => parseHarnessLabInput({
     ...baseline, tasks: baseline.tasks.map(t => ({ ...t, requiredChecks: [] })),
+  }));
+});
+
+test("CLI smoke prints HOLD JSON and rejects invalid input without invoking agents", () => {
+  const result = spawnSync(process.execPath, [
+    "dist/src/harness/ecc-lab-cli.js", "fixtures/harness/ecc-shadow-demo.json",
+  ], { encoding: "utf8", timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout) as { gate: string; externalAgentInvocation: boolean };
+  assert.equal(report.gate, "HOLD");
+  assert.equal(report.externalAgentInvocation, false);
+  const wrongArgs = spawnSync(process.execPath, ["dist/src/harness/ecc-lab-cli.js"], {
+    encoding: "utf8", timeout: 10000,
+  });
+  assert.equal(wrongArgs.status, 1);
+});
+
+test("Skill frontmatter cannot impersonate a different skill or trigger executable installers", () => {
+  const baseline = sample();
+  for (const body of [
+    "---\\nname: another-skill\\ndescription: Wrong identity.\\n---",
+    "---\\nname: ecc-harness-review\\ndescription: risky\\n---\\nnpx ecc-universal setup",
+  ]) {
+    const inspected = evaluateHarnessLab({ ...baseline, skills: baseline.skills.map(s => ({
+      ...s, body: body.replace(/\\n/g, "\n"),
+    })) });
+    assert.equal(inspected.skills[0]?.status, "BLOCKED");
+  }
+  assert.throws(() => parseHarnessLabInput({
+    ...baseline, skills: baseline.skills.map(s => ({ ...s, id: "evil(?" })),
   }));
 });
