@@ -5,7 +5,7 @@
  */
 export type HarnessLane = "codex" | "claude-code" | "free";
 export type CheckStatus = "PASS" | "FAIL" | "UNKNOWN";
-export type GateStatus = "HOLD" | "REJECT" | "READY_FOR_HUMAN_REVIEW";
+export type HarnessGateStatus = "HOLD" | "REJECT" | "READY_FOR_HUMAN_REVIEW";
 
 export interface HarnessTask {
   id: string;
@@ -70,7 +70,7 @@ export interface HarnessLaneReport {
   durationMsTotal?: number;
   costUsdTotal?: number;
   tokenCountTotal?: number;
-  status: GateStatus;
+  status: HarnessGateStatus;
   reasons: readonly string[];
 }
 export interface HarnessCandidateReport {
@@ -90,7 +90,7 @@ export interface HarnessLabReport {
   laneReports: readonly HarnessLaneReport[];
   instincts: readonly HarnessCandidateReport[];
   skills: readonly HarnessCandidateReport[];
-  gate: GateStatus;
+  gate: HarnessGateStatus;
   reasons: readonly string[];
 }
 
@@ -210,7 +210,7 @@ export function evaluateHarnessLab(input: HarnessLabInput): HarnessLabReport {
       const values = validObserved.map(r => r[key]).filter((v): v is number => v !== undefined);
       return values.length ? values.reduce((a, b) => a + b, 0) : undefined;
     };
-    const status: GateStatus = failed ? "REJECT" :
+    const status: HarnessGateStatus = failed ? "REJECT" :
       missingTasks.length || unknown || receipts.length === 0 ? "HOLD" : "READY_FOR_HUMAN_REVIEW";
     const durationMsTotal = sumObserved("durationMs");
     const costUsdTotal = sumObserved("costUsd");
@@ -254,7 +254,7 @@ export function evaluateHarnessLab(input: HarnessLabInput): HarnessLabReport {
   if (laneReports.some(r => r.status === "REJECT")) reasons.push("agent receipt or privacy policy rejected");
   if ([...instincts, ...skills].some(r => r.status === "BLOCKED")) reasons.push("candidate safety or provenance check blocked");
   if (laneReports.some(r => r.status === "HOLD")) reasons.push("missing actual independently judged A/B evidence");
-  const gate: GateStatus = reasons.some(r => /rejected|blocked/.test(r)) ? "REJECT" :
+  const gate: HarnessGateStatus = reasons.some(r => /rejected|blocked/.test(r)) ? "REJECT" :
     reasons.length ? "HOLD" : "READY_FOR_HUMAN_REVIEW";
   return {
     schemaVersion: "mso.ecc-harness-report.v0", mode: "OFFLINE_SHADOW",
