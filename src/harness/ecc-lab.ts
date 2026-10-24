@@ -233,11 +233,11 @@ export function evaluateHarnessLab(input: HarnessLabInput): HarnessLabReport {
   });
   const skills: HarnessCandidateReport[] = input.skills.map(s => {
     const reasons: string[] = [];
-    if (s.license !== "MIT" || !s.source.startsWith("https://github.com/affaan-m/ECC")) {
+    if (s.license !== "MIT" || s.source !== "https://github.com/affaan-m/ECC") {
       reasons.push("unapproved source or license");
     }
     if (!/^skills\/[a-z0-9-]+\/SKILL\.md$/.test(s.path)) reasons.push("unsafe skill path");
-    if (!/^---\r?\nname: [a-z0-9-]+\r?\ndescription: .+/m.test(s.body)) {
+    if (!new RegExp("^---\\r?\\nname: " + s.id + "\\r?\\ndescription: .+", "m").test(s.body)) {
       reasons.push("missing portable skill frontmatter");
     }
     if (/\$\{CLAUDE_(?:PROJECT_DIR|PLUGIN_ROOT|SKILL_DIR|SESSION_ID)\}|\$ARGUMENTS/.test(s.body)) {
@@ -245,7 +245,7 @@ export function evaluateHarnessLab(input: HarnessLabInput): HarnessLabReport {
     }
     if (/(?:^|\n)hooks\s*:/im.test(s.body) ||
         /(?:curl|wget)[^\n|]*\|\s*(?:ba)?sh\b|(?:rm\s+-rf|git\s+push\s+--force)/i.test(s.body) ||
-        /(?:npm|pnpm|yarn)\s+(?:install|add)\b/i.test(s.body)) {
+        /(?:npm|pnpm|yarn)\s+(?:install|add)\b|\b(?:npx|bunx|pnpm\s+dlx|yarn\s+dlx)\s+[^\n]+/i.test(s.body)) {
       reasons.push("executable installation, destructive action or hook declaration");
     }
     return { id: s.id, status: reasons.length ? "BLOCKED" : "REVIEW_ONLY", reasons };
