@@ -1,0 +1,54 @@
+{
+  "experiment": "MSO-DM-M0.8",
+  "mode": "SHADOW",
+  "cases": [
+    {
+      "id": "shadow-snapshot",
+      "action": "snapshot",
+      "target": "Notepad",
+      "expected": "allow"
+    },
+    {
+      "id": "shadow-click",
+      "action": "click",
+      "target": "Notepad",
+      "expected": "deny"
+    },
+    {
+      "id": "shadow-type",
+      "action": "type",
+      "target": "Notepad",
+      "expected": "deny"
+    },
+    {
+      "id": "shadow-clipboard",
+      "action": "clipboard-get",
+      "target": "Notepad",
+      "expected": "deny"
+    },
+    {
+      "id": "shadow-shell",
+      "action": "shell",
+      "target": "local",
+      "expected": "deny"
+    },
+    {
+      "id": "shadow-screenshot",
+      "action": "screenshot",
+      "target": "Notepad",
+      "expected": "deny"
+    },
+    {
+      "id": "shadow-godot",
+      "action": "click",
+      "target": "Godot",
+      "expected": "deny"
+    },
+    {
+      "id": "shadow-unknown",
+      "action": "click",
+      "target": "Unknown app",
+      "expected": "deny"
+    }
+  ]
+}
